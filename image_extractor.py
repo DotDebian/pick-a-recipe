@@ -11,6 +11,56 @@ from helpers import setup_logger
 
 logger = setup_logger(__name__)
 
+# Which candidate the model picked, saved next to the frames. Without it a
+# re-run that reuses the cached frames had no idea which one was chosen and
+# fell back to candidate 0, the first frame of the video.
+BEST_INDEX_FILE = "best_index.txt"
+
+
+def save_best_index(frames_dir: str, index: int) -> None:
+    try:
+        with open(os.path.join(frames_dir, BEST_INDEX_FILE), "w") as fh:
+            fh.write(str(int(index)))
+    except OSError as exc:
+        logger.warning("[Extract Image] Could not cache best frame index: %s", exc)
+
+
+def load_best_index(frames_dir: str, count: int) -> int | None:
+    try:
+        with open(os.path.join(frames_dir, BEST_INDEX_FILE)) as fh:
+            index = int(fh.read().strip())
+    except (OSError, ValueError):
+        return None
+    return index if 0 <= index < count else None
+
+
+def cached_candidates(dish_dir: str) -> dict | None:
+    """Reuse frames from an earlier run, with the frame that was picked then.
+
+    Returns None when there is nothing to reuse. A cache from before the index
+    was saved gets the selection run again rather than defaulting to frame 0.
+    """
+    frames_dir = os.path.join(dish_dir, "dish_frames")
+    best_image = os.path.join(dish_dir, "dish.jpg")
+    if not (os.path.isdir(frames_dir) and os.path.exists(best_image)):
+        return None
+    candidates = sorted(
+        os.path.join(frames_dir, f)
+        for f in os.listdir(frames_dir)
+        if f.startswith("dish_candidate_") and f.endswith(".jpg")
+    )
+    if not candidates:
+        return None
+    best = load_best_index(frames_dir, len(candidates))
+    if best is None:
+        best = select_best_frame(candidates)
+        if best is None:
+            best = len(candidates) - 1
+        save_best_index(frames_dir, best)
+        ImageExtractor(os.path.join(dish_dir, "video.mp4"))._enhance_frame(
+            candidates[best], best_image)
+    return {"best_image": best_image, "best_index": best, "candidates": candidates}
+
 
 class ImageExtractor:
     """
@@ -203,7 +253,8 @@ def extract_dish_image_candidates(video_path: str, num_candidates: int = 12) -> 
     
     if best_frame_idx is None:
         best_frame_idx = len(frames) - 1
-    
+    save_best_index(extractor.frames_dir, best_frame_idx)
+
     # Create enhanced version of the best frame
     best_frame = frames[best_frame_idx]
     output_path = os.path.join(extractor.dish_dir, "dish.jpg")

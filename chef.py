@@ -44,7 +44,9 @@ def build_recipe_user_payload(
         "on_screen_text": visual_text or "",
         "audio_transcript": audio_transcript or "",
         "quantity_rule": (
-            "Prefer on_screen_text for ingredients and quantities. "
+            "description is the creator's own caption; when it lists ingredients "
+            "with quantities, treat it as authoritative, like on_screen_text. "
+            "Otherwise prefer on_screen_text for ingredients and quantities. "
             "Use audio_transcript only to fill gaps. "
             "Never invent a quantity or unit; use empty strings if not clearly present."
         ),

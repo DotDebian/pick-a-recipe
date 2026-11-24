@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional, Protocol
 
 from config import config
-from image_extractor import extract_dish_image_candidates
+from image_extractor import cached_candidates, extract_dish_image_candidates
 from transcriber import Transcriber
 from uploaders import (
     format_targets,
@@ -168,17 +168,13 @@ def run_extraction_pipeline(
         image_path = None
         image_candidates: list[str] = []
         best_image_index = 0
-        image_cache = os.path.join(dish_dir, "dish.jpg")
-        frames_dir = os.path.join(dish_dir, "dish_frames")
 
-        if os.path.exists(frames_dir) and os.path.exists(image_cache):
+        cached = cached_candidates(dish_dir)
+        if cached is not None:
             reporter.update("image", "Using cached dish images", 75)
-            image_path = image_cache
-            image_candidates = sorted(
-                os.path.join(frames_dir, f)
-                for f in os.listdir(frames_dir)
-                if f.startswith("dish_candidate_") and f.endswith(".jpg")
-            )
+            image_path = cached["best_image"]
+            image_candidates = cached["candidates"]
+            best_image_index = cached["best_index"]
         else:
             try:
                 result = extract_dish_image_candidates(video_path)
