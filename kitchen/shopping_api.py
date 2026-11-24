@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import jsonify, request
 
-from kitchen import aisles, shopping
+from kitchen import aisles, shopping, shopping_ai
 from kitchen.web import KitchenError, body, notify, protected_blueprint
 
 bp = protected_blueprint("kitchen_shopping", __name__)
@@ -28,7 +28,14 @@ def _payload(list_id: int) -> dict:
         "checked": [i for i in visible if i["checked"]],
         "excluded": [i for i in items if i["excluded"]],
         "aisles": list(aisles.AISLES),
+        # True while an AI pass is tidying this list; the page shows it.
+        "consolidating": shopping_ai.is_running(list_id),
     }
+
+
+def _tidy_later(list_id: int) -> None:
+    shopping_ai.consolidate_async(
+        list_id, on_done=lambda lid, _result: notify("shopping", list_id=lid))
 
 
 @bp.get("/shopping/lists")
@@ -139,8 +146,18 @@ def generate():
         result = shopping.generate_from_plan(list_id, data["start"], data["end"])
     else:
         raise KitchenError("Give a recipe_id, or a start and end date from the plan")
+    _tidy_later(list_id)
     notify("shopping", list_id=list_id)
     return jsonify({**result, **_payload(list_id)})
+
+
+@bp.post("/shopping/consolidate")
+def consolidate():
+    data = body()
+    list_id = _list_id(data.get("list_id"))
+    _tidy_later(list_id)
+    notify("shopping", list_id=list_id)
+    return jsonify(_payload(list_id))
 
 
 @bp.post("/shopping/clear")

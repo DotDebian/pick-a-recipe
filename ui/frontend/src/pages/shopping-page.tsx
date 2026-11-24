@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import {
-  Archive, ChevronDown, CloudOff, MoreHorizontal, Pencil, Plus, ShoppingBasket, Trash2,
+  Archive, ChevronDown, CloudOff, Loader2, MoreHorizontal, Pencil, Plus, ShoppingBasket, Sparkles, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -244,6 +244,14 @@ export function ShoppingPage() {
                 )}
                 <DropdownMenuSeparator />
                 {activeId && (
+                  <DropdownMenuItem
+                    disabled={view?.consolidating}
+                    onSelect={async () => { await kitchen.consolidateShopping(activeId); refresh() }}
+                  >
+                    <Sparkles />{t('shopping.tidy')}
+                  </DropdownMenuItem>
+                )}
+                {activeId && (
                   <DropdownMenuItem onSelect={async () => { await kitchen.clearShopping(activeId, true); refresh() }}>
                     <Trash2 />{t('shopping.clearAll')}
                   </DropdownMenuItem>
@@ -253,6 +261,13 @@ export function ShoppingPage() {
           </>
         }
       />
+
+      {view?.consolidating && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Loader2 className="size-4 animate-spin" />
+          {t('shopping.tidying')}
+        </div>
+      )}
 
       {(offline || q.queue.length > 0) && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">

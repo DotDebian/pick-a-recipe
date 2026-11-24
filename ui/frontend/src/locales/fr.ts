@@ -288,6 +288,8 @@ const fr: typeof en = {
     clearChecked: 'Vider',
     offline: 'Hors ligne. Les modifications sont enregistrées et seront synchronisées à la reconnexion.',
     syncing: 'Synchronisation des modifications…',
+    tidy: 'Réorganiser avec l’IA',
+    tidying: 'L’IA regroupe les doublons et range la liste par rayon…',
     ...pl('pending', '{{count}} en attente', '{{count}} en attente'),
     ...pl('staleEdits', '{{count}} modification était plus ancienne que celle d’un autre utilisateur et a été ignorée', '{{count}} modifications étaient plus anciennes que celles d’un autre utilisateur et ont été ignorées'),
     ...pl('addedFromRecipe', '{{count}} article ajouté', '{{count}} articles ajoutés'),

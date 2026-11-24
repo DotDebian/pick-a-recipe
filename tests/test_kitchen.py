@@ -181,6 +181,139 @@ def test_shopping_last_write_wins(kitchen):
     assert future["updated_at"] < "2999"
 
 
+def test_shopping_one_line_per_food_across_units(kitchen):
+    """3 tbsp of parmesan and 100 g of parmesan are one line, not two."""
+    from kitchen import shopping
+
+    list_id = shopping.default_list_id()
+    first = shopping.add_item(list_id, food="parmesan", quantity="100", unit="g")
+    second = shopping.add_item(list_id, food="Parmesan", quantity="3", unit="tbsp")
+    third = shopping.add_item(list_id, food="parmesan", quantity="50", unit="g")
+    rows = shopping.list_items(list_id)
+    assert first == second == third and len(rows) == 1
+    assert rows[0]["quantity"] == 150 and rows[0]["unit"] == "g"
+    assert "+ 3 tbsp" in rows[0]["note"]
+
+    # Spoons first, grams second: grams still become the amount.
+    other = shopping.create_list("other")
+    shopping.add_item(other, food="parmesan", quantity="3", unit="tbsp")
+    shopping.add_item(other, food="parmesan", quantity="100", unit="g")
+    (row,) = shopping.list_items(other)
+    assert (row["quantity"], row["unit"]) == (100, "g") and "+ 3 tbsp" in row["note"]
+
+
+def test_shopping_french_plurals_merge(kitchen):
+    from kitchen import shopping
+
+    list_id = shopping.default_list_id()
+    shopping.add_item(list_id, food="tomates séchées", quantity="2", unit="tbsp")
+    shopping.add_item(list_id, food="tomate séchée", quantity="1", unit="tbsp")
+    shopping.add_item(list_id, food="pâtes", quantity="300", unit="g")
+    shopping.add_item(list_id, food="pâte", quantity="200", unit="g")
+    shopping.add_item(list_id, food="crème fraîche", quantity="20", unit="cl")
+    shopping.add_item(list_id, food="crème", quantity="10", unit="cl")
+    foods = sorted(r["food"] for r in shopping.list_items(list_id))
+    assert len(foods) == 4  # crème and crème fraîche stay apart
+
+
+def _three_line_list():
+    from kitchen import shopping
+
+    list_id = shopping.default_list_id()
+    a = shopping.add_item(list_id, food="oignon", note="")
+    b = shopping.add_item(list_id, food="oignon blanc", quantity="1", note="émincé")
+    c = shopping.add_item(list_id, food="crème fraîche", quantity="20", unit="cl")
+    return list_id, a, b, c
+
+
+def test_shopping_ai_merges_lines(kitchen, monkeypatch):
+    from kitchen import shopping, shopping_ai
+
+    list_id, a, b, c = _three_line_list()
+    answer = {"items": [
+        {"source_ids": [a, b], "food": "oignon blanc", "quantity": 1, "unit": "", "note": "", "aisle": "produce"},
+        {"source_ids": [c], "food": "crème fraîche", "quantity": 20, "unit": "cl", "note": "", "aisle": "dairy"},
+    ]}
+    monkeypatch.setattr(shopping_ai, "_ask_model", lambda lines: answer)
+    assert shopping_ai.consolidate(list_id)["status"] == "ok"
+    items = {i["food"]: i for i in shopping.list_items(list_id)}
+    assert set(items) == {"oignon blanc", "crème fraîche"}
+    assert items["oignon blanc"]["aisle"] == "produce" and items["oignon blanc"]["note"] == ""
+
+
+def test_shopping_ai_answer_missing_a_line_is_dropped(kitchen, monkeypatch):
+    from kitchen import shopping, shopping_ai
+
+    list_id, a, b, c = _three_line_list()
+    answer = {"items": [
+        {"source_ids": [a, b], "food": "oignon", "quantity": None, "unit": "", "note": "", "aisle": "produce"},
+    ]}
+    monkeypatch.setattr(shopping_ai, "_ask_model", lambda lines: answer)
+    assert shopping_ai.consolidate(list_id)["status"] == "failed"
+    assert len(shopping.list_items(list_id)) == 3
+
+
+def test_shopping_ai_repeated_id_is_rejected():
+    from kitchen import shopping_ai
+
+    bad = {"items": [
+        {"source_ids": [1], "food": "x", "quantity": None, "unit": "", "note": "", "aisle": "other"},
+        {"source_ids": [1, 2], "food": "y", "quantity": None, "unit": "", "note": "", "aisle": "other"},
+    ]}
+    with pytest.raises(ValueError):
+        shopping_ai.validate(bad, {1, 2})
+
+
+def test_shopping_ai_keeps_list_changed_during_pass(kitchen, monkeypatch):
+    from kitchen import shopping, shopping_ai
+
+    list_id, a, b, c = _three_line_list()
+
+    def answer_after_user_checks_an_item(lines):
+        shopping.update_item(a, {"checked": True, "client_ts": "2999-01-01T00:00:00Z"})
+        return {"items": [
+            {"source_ids": [a, b], "food": "oignon", "quantity": 1, "unit": "", "note": "", "aisle": "produce"},
+            {"source_ids": [c], "food": "crème fraîche", "quantity": 20, "unit": "cl", "note": "", "aisle": "dairy"},
+        ]}
+
+    monkeypatch.setattr(shopping_ai, "_ask_model", answer_after_user_checks_an_item)
+    assert shopping_ai.consolidate(list_id)["status"] == "conflict"
+    assert len(shopping.list_items(list_id)) == 3
+
+
+def test_shopping_ai_respects_aisle_chosen_by_hand(kitchen, monkeypatch):
+    from kitchen import aisles, shopping, shopping_ai
+
+    list_id, a, b, c = _three_line_list()
+    aisles.remember("crème fraîche", "frozen")
+    answer = {"items": [
+        {"source_ids": [a, b], "food": "oignon", "quantity": 1, "unit": "", "note": "", "aisle": "produce"},
+        {"source_ids": [c], "food": "crème fraîche", "quantity": 20, "unit": "cl", "note": "", "aisle": "dairy"},
+    ]}
+    monkeypatch.setattr(shopping_ai, "_ask_model", lambda lines: answer)
+    shopping_ai.consolidate(list_id)
+    items = {i["food"]: i for i in shopping.list_items(list_id)}
+    assert items["crème fraîche"]["aisle"] == "frozen"
+
+
+def test_shopping_ai_leaves_checked_lines_out(kitchen, monkeypatch):
+    from kitchen import shopping, shopping_ai
+
+    list_id, a, b, c = _three_line_list()
+    shopping.update_item(c, {"checked": True})
+    seen = {}
+
+    def model(lines):
+        seen["ids"] = sorted(line["id"] for line in lines)
+        return {"items": [
+            {"source_ids": [a, b], "food": "oignon", "quantity": 1, "unit": "", "note": "", "aisle": "produce"},
+        ]}
+
+    monkeypatch.setattr(shopping_ai, "_ask_model", model)
+    assert shopping_ai.consolidate(list_id)["status"] == "ok"
+    assert seen["ids"] == sorted([a, b])
+
+
 # ===== Meal plan =====
 
 def test_plan_leftovers_and_generate(kitchen):

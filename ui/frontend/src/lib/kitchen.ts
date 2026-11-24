@@ -233,6 +233,8 @@ export interface ShoppingPayload {
   checked: ShoppingItem[]
   excluded: ShoppingItem[]
   aisles: string[]
+  /** An AI pass is tidying the list; it refreshes itself when done. */
+  consolidating?: boolean
 }
 
 export interface ShoppingList {
@@ -450,6 +452,8 @@ export const kitchen = {
       `${K}/shopping/sync`, { method: 'POST', json: { ops } }),
   generateShopping: (body: { list_id?: number; recipe_id?: string; servings?: number | null; only_foods?: string[]; start?: string; end?: string }) =>
     request<ShoppingPayload & { added: number; recipes?: number }>(`${K}/shopping/generate`, { method: 'POST', json: body }),
+  consolidateShopping: (listId: number) =>
+    request<ShoppingPayload>(`${K}/shopping/consolidate`, { method: 'POST', json: { list_id: listId } }),
   clearShopping: (listId: number, all = false) =>
     request<{ removed: number }>(`${K}/shopping/clear`, { method: 'POST', json: { list_id: listId, all } }),
 

@@ -128,21 +128,58 @@ def grouped(items: list[dict]) -> list[dict]:
     ]
 
 
+def _format_amount(value: float) -> str:
+    rounded = round(float(value), 2)
+    return str(int(rounded)) if rounded == int(rounded) else f"{rounded:g}"
+
+
 def _merge_into(conn, list_id: int, food: str, amount: float | None, unit: str,
                 sources: list[dict], *, manual: bool, excluded: bool, note: str,
                 overrides: dict[str, str]) -> int:
-    """Add to an open item for the same food and unit family, or insert one."""
+    """Add to the open item for the same food, or insert one.
+
+    Amounts in the same unit family are summed. An amount that cannot be added
+    (3 tbsp of parmesan onto 100 g) is written next to it in the note rather
+    than opening a second line for the same food; converting it would need a
+    density guess, and a wrong weight on a shopping list is worse than two
+    readable amounts.
+    """
     key = food_key(food)
     family = to_base(amount, unit)[1] if amount is not None else None
-    for r in conn.execute(
-        "SELECT * FROM shopping_items WHERE list_id = ? AND checked = 0 AND excluded = ?",
-        (list_id, 1 if excluded else 0),
-    ).fetchall():
-        if food_key(r["food"]) != key:
-            continue
-        existing_family = to_base(r["quantity_value"], r["unit"])[1] if r["quantity_value"] is not None else None
+    rows = [
+        r for r in conn.execute(
+            "SELECT * FROM shopping_items WHERE list_id = ? AND checked = 0 AND excluded = ?",
+            (list_id, 1 if excluded else 0),
+        ).fetchall()
+        if food_key(r["food"]) == key
+    ]
+
+    def _family(r):
+        return to_base(r["quantity_value"], r["unit"])[1] if r["quantity_value"] is not None else None
+
+    # Prefer the line whose amount can absorb this one; any line for the food otherwise.
+    rows.sort(key=lambda r: 0 if amount is None or _family(r) in (None, family) else 1)
+    for r in rows:
+        existing_family = _family(r)
         if amount is not None and existing_family is not None and existing_family != family:
-            continue
+            # A weight is what the shop sells by, so it becomes the line's
+            # amount and the spoons/pieces move to the note.
+            main_amount, main_unit = r["quantity_value"], r["unit"]
+            side_amount, side_unit = amount, unit
+            if family == "mass" and existing_family != "mass":
+                main_amount, main_unit, side_amount, side_unit = amount, unit, main_amount, main_unit
+            extra = f"+ {_format_amount(side_amount)} {side_unit}".strip()
+            merged_note = "; ".join(p for p in (r["note"] or "", extra) if p)
+            merged_sources = json.loads(r["source_recipes"] or "[]")
+            known = {s.get("id") for s in merged_sources}
+            merged_sources += [s for s in sources if s.get("id") not in known]
+            conn.execute(
+                "UPDATE shopping_items SET quantity_value = ?, unit = ?, note = ?, source_recipes = ?,"
+                " updated_at = ? WHERE id = ?",
+                (round(main_amount, 3), main_unit, merged_note[:300],
+                 json.dumps(merged_sources, ensure_ascii=False), _now(), r["id"]),
+            )
+            return int(r["id"])
         new_amount, new_unit = r["quantity_value"], r["unit"]
         if amount is not None:
             if new_amount is None:

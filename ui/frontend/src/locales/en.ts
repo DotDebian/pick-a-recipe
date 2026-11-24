@@ -286,6 +286,8 @@ const en = {
     clearChecked: 'Clear',
     offline: 'Offline. Changes are saved and will sync when you reconnect.',
     syncing: 'Syncing changes…',
+    tidy: 'Tidy up with AI',
+    tidying: 'AI is merging duplicates and sorting the list into aisles…',
     ...pl('pending', '{{count}} pending', '{{count}} pending'),
     ...pl('staleEdits', '{{count}} edit was older than someone else’s and was skipped', '{{count}} edits were older than someone else’s and were skipped'),
     ...pl('addedFromRecipe', 'Added {{count}} item', 'Added {{count}} items'),

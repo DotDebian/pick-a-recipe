@@ -74,21 +74,32 @@ _ORDERED = sorted(
 )
 
 
+def _singular_stem(word: str) -> str:
+    """A comparison stem shared by a word's singular and plural, English or French.
+
+    Only ever compared with another stem, never shown: "peaches"/"peach",
+    "tomatoes"/"tomato", "tomates séchées"/"tomate séchée", "poireaux"/"poireau",
+    "pois chiches"/"pois chiche" all land on the same string.
+    """
+    if len(word) <= 3 or not re.fullmatch(r"[a-zà-ÿœæ]+", word):
+        return word
+    if word.endswith("ies"):
+        word = word[:-3] + "y"
+    elif word.endswith(("eaux", "aux", "oux")):
+        word = word[:-1]
+    elif word.endswith("oes"):
+        word = word[:-2]
+    elif word.endswith("s") and not word.endswith(("ss", "us", "is", "os")):
+        word = word[:-1]
+    if word.endswith("e") and len(word) > 3:
+        word = word[:-1]
+    return word
+
+
 def food_key(food: str) -> str:
     text = " ".join(str(food or "").casefold().split())
     text = re.sub(r"[^\w\s\u0590-\u05FF'\"-]", "", text)
-    words = text.split()
-    if words:
-        last = words[-1]
-        if re.fullmatch(r"[a-z]+", last) and len(last) > 3:
-            if last.endswith("oes") or last.endswith("ches") or last.endswith("shes"):
-                last = last[:-2]
-            elif last.endswith("ies"):
-                last = last[:-3] + "y"
-            elif last.endswith("s") and not last.endswith("ss"):
-                last = last[:-1]
-        words[-1] = last
-    return " ".join(words)
+    return " ".join(_singular_stem(w) for w in text.split())
 
 
 def guess_aisle(food: str) -> str:
