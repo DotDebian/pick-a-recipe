@@ -432,10 +432,14 @@ class JobManager:
                 # Progress metadata for sub-states (downloading, transcribing,
                 # ...) rides inside the RUNNING row without changing state.
                 update_job_progress(job_id, current['status'], percent,
-                                    stage, message, video_title)
+                                    stage, message, video_title,
+                                    expected_status=current['status'])
         else:
+            # Guarded on the status just read: a worker may claim the job
+            # between that read and this write.
             update_job_progress(job_id, status, percent, stage, message,
-                                video_title)
+                                video_title,
+                                expected_status=current['status'] if current else None)
 
         with self._lock:
             if job_id in self.active_jobs:

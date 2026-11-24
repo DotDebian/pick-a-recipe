@@ -747,24 +747,30 @@ def get_all_jobs() -> List[Dict[str, Any]]:
 
 def update_job_progress(job_id: str, status: str, progress: int,
                         current_stage: str, stage_message: str,
-                        video_title: Optional[str] = None) -> bool:
-    """Update job progress."""
+                        video_title: Optional[str] = None,
+                        expected_status: Optional[str] = None) -> bool:
+    """Update job progress.
+
+    ``expected_status`` makes the write a compare-and-set: it only lands while
+    the row still has the status the caller read. Without it a progress write
+    racing a worker's claim (queued -> running) puts the job back to queued.
+    """
+    sets = 'status = ?, progress = ?, current_stage = ?, stage_message = ?'
+    params: list = [status, progress, current_stage, stage_message]
+    if video_title:
+        sets += ', video_title = ?'
+        params.append(video_title)
+    where = 'id = ?'
+    params.append(job_id)
+    if expected_status is not None:
+        where += ' AND status = ?'
+        params.append(expected_status)
     with get_db() as conn:
         cursor = conn.cursor()
-        if video_title:
-            cursor.execute('''
-                UPDATE recipe_jobs
-                SET status = ?, progress = ?, current_stage = ?, stage_message = ?,
-                    video_title = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (status, progress, current_stage, stage_message, video_title, job_id))
-        else:
-            cursor.execute('''
-                UPDATE recipe_jobs
-                SET status = ?, progress = ?, current_stage = ?, stage_message = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (status, progress, current_stage, stage_message, job_id))
+        cursor.execute(
+            f'UPDATE recipe_jobs SET {sets}, updated_at = CURRENT_TIMESTAMP WHERE {where}',
+            params,
+        )
         conn.commit()
         return cursor.rowcount > 0
 

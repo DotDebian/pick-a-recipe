@@ -374,6 +374,25 @@ OpenRouter — so there you get a clear error naming the provider instead.
 provider registry on first load, with the provider you had selected still
 selected.
 
+### Claude subscription (Agent SDK) — fork addition
+
+This fork adds a **Claude subscription (Pro/Max)** provider type. It runs
+requests through the [Claude Agent SDK](https://docs.claude.com/en/docs/claude-code/sdk),
+which drives the bundled Claude Code CLI with an OAuth token, so extraction is
+billed to your Claude plan instead of API credits.
+
+1. On any machine with Claude Code: `claude setup-token` (valid one year).
+2. Either set `CLAUDE_CODE_OAUTH_TOKEN=<token>` in the container environment,
+   or paste the token into the provider's key field in Settings.
+3. Settings → AI Providers → add **Claude subscription (Pro/Max)**, model
+   `sonnet` (aliases `opus`/`haiku` or full model ids also work), then pick it
+   under AI Extraction.
+
+All Claude Code tools are disabled and no settings files are loaded, so each
+call is a plain single-turn request; JSON comes back through the SDK's
+`output_format` structured output. Vision (frames, dish photo) works. Audio
+still goes through local Whisper. Subscription usage limits apply.
+
 ## Usage
 
 ### Web UI

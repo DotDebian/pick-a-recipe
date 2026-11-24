@@ -158,8 +158,10 @@ def check_llm(probe_network: bool = False) -> dict:
 
 def _list_available_models(provider) -> list[str]:
     """Return available model ids for a provider (best-effort)."""
-    from ai_providers import ANTHROPIC, GEMINI, AiSession
+    from ai_providers import ANTHROPIC, CLAUDE_SUBSCRIPTION, GEMINI, AiSession
 
+    if provider.api_type == CLAUDE_SUBSCRIPTION:
+        return []  # The CLI resolves aliases itself; there is no list endpoint.
     client = AiSession(provider).client
     if provider.api_type == GEMINI:
         return [getattr(m, "name", "") for m in client.models.list()]

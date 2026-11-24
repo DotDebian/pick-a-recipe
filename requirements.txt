@@ -4,6 +4,8 @@ openai
 # Only needed for a provider configured with the Anthropic API type; imported
 # lazily so the rest of the app runs without it.
 anthropic
+# Claude Pro/Max subscription provider (bundles the Claude Code CLI).
+claude-agent-sdk
 pydantic>=2
 python-dotenv
 requests

@@ -217,6 +217,11 @@ const KINDS: Kind[] = [
   { value: 'gemini', label: 'Google Gemini', api_type: 'gemini' },
   { value: 'anthropic', label: 'Anthropic (Claude)', api_type: 'anthropic' },
   {
+    value: 'claude-subscription',
+    label: 'Claude subscription (Pro/Max)',
+    api_type: 'claude-subscription',
+  },
+  {
     value: 'openrouter',
     label: 'OpenRouter',
     api_type: 'openai-compatible',

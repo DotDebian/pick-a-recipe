@@ -34,6 +34,10 @@ OPENAI = "openai"
 OPENAI_COMPATIBLE = "openai-compatible"
 GEMINI = "gemini"
 ANTHROPIC = "anthropic"
+# A Claude Pro/Max subscription reached through the Claude Agent SDK, which
+# drives the bundled Claude Code CLI with an OAuth token from
+# ``claude setup-token`` instead of a pay-as-you-go API key.
+CLAUDE_SUBSCRIPTION = "claude-subscription"
 
 API_TYPES: dict[str, dict[str, Any]] = {
     OPENAI: {
@@ -93,6 +97,22 @@ API_TYPES: dict[str, dict[str, Any]] = {
         "key_hint": "Create a key in the Anthropic console.",
         "key_url": "https://console.anthropic.com/settings/keys",
         "key_link_label": "Anthropic console",
+    },
+    CLAUDE_SUBSCRIPTION: {
+        "label": "Claude subscription (Agent SDK)",
+        "needs_base_url": False,
+        "default_base_url": "",
+        "catalog": "anthropic",
+        "example_model": "sonnet",
+        "key_placeholder": "sk-ant-oat01-... (empty = server token)",
+        "key_hint": (
+            "Uses your Claude Pro/Max plan instead of API credits. Run "
+            "`claude setup-token` and paste the token, or leave this empty "
+            "when the server sets CLAUDE_CODE_OAUTH_TOKEN. Model accepts "
+            "aliases (sonnet, opus, haiku) or full ids."
+        ),
+        "key_url": "https://docs.claude.com/en/docs/claude-code/sdk",
+        "key_link_label": "Claude Agent SDK",
     },
 }
 
@@ -316,7 +336,13 @@ def validate(provider: AiProvider, *, require_key: bool = True) -> None:
         )
     # A local OpenAI-compatible server (Ollama, LM Studio, vLLM) legitimately
     # has no key; the hosted APIs all require one.
-    if require_key and not provider.api_key and provider.api_type != OPENAI_COMPATIBLE:
+    if (require_key and provider.api_type == CLAUDE_SUBSCRIPTION
+            and not _subscription_token(provider)):
+        raise ProviderConfigError(
+            f"Provider {provider.label!r} has no subscription token. Paste the "
+            f"output of `claude setup-token`, or set CLAUDE_CODE_OAUTH_TOKEN.")
+    if (require_key and not provider.api_key
+            and provider.api_type not in (OPENAI_COMPATIBLE, CLAUDE_SUBSCRIPTION)):
         raise ProviderConfigError(
             f"Provider {provider.label!r} has no API key set.")
 
@@ -401,6 +427,9 @@ class AiSession:
                 api_key=provider.api_key,
                 **({"base_url": provider.base_url} if provider.base_url else {}),
             )
+        elif provider.api_type == CLAUDE_SUBSCRIPTION:
+            # No long-lived client: every call spawns the Agent SDK's CLI.
+            self._client = _SubscriptionClient(provider)
         else:  # pragma: no cover - validate() rejects this first
             raise ProviderConfigError(f"Unknown API type {provider.api_type!r}.")
         return self._client
@@ -708,11 +737,118 @@ def _anthropic_images(session, model, prompt, image_paths, schema_name,
     return _anthropic_call(session, model, "", blocks, schema_name, json_schema)
 
 
+# -- Claude subscription via the Agent SDK ----------------------------------
+# The SDK runs the bundled Claude Code CLI as a subprocess. Every built-in tool
+# is disabled and no settings files are loaded, so it behaves as a plain
+# single-turn model call; ``output_format`` gives schema-conforming JSON.
+_SUBSCRIPTION_TIMEOUT_S = 300
+
+
+def _subscription_token(provider: AiProvider) -> str:
+    import os
+    return provider.api_key or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+
+
+class _SubscriptionClient:
+    """Placeholder so code that asks for ``session.client`` gets something."""
+
+    def __init__(self, provider: AiProvider):
+        self.provider = provider
+
+
+def _subscription_call(session, model, system_prompt, blocks, json_schema) -> str:
+    import asyncio
+    import os
+    import tempfile
+
+    try:
+        from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+    except ImportError as exc:  # pragma: no cover - dependency guard
+        raise ProviderConfigError(
+            "The 'claude-agent-sdk' package is not installed, so a Claude "
+            "subscription provider cannot be used."
+        ) from exc
+
+    token = _subscription_token(session.provider)
+    if not token:
+        raise ProviderConfigError(
+            f"Provider {session.provider.label!r} has no subscription token.")
+
+    # The CLI prefers an API key over the OAuth token when both are present,
+    # which would silently bill API credits instead of the subscription.
+    env = {"CLAUDE_CODE_OAUTH_TOKEN": token, "ANTHROPIC_API_KEY": ""}
+    workdir = os.path.join(tempfile.gettempdir(), "par-claude")
+    os.makedirs(workdir, exist_ok=True)
+
+    options = ClaudeAgentOptions(
+        tools=[],
+        model=model or None,
+        system_prompt=system_prompt or "You are a precise recipe extraction assistant.",
+        max_turns=4,
+        setting_sources=[],
+        env=env,
+        cwd=workdir,
+        **({"output_format": {"type": "json_schema", "schema": json_schema}}
+           if json_schema is not None else {}),
+    )
+
+    async def _messages():
+        yield {
+            "type": "user",
+            "message": {"role": "user", "content": blocks},
+            "parent_tool_use_id": None,
+            "session_id": "pick-a-recipe",
+        }
+
+    async def _run():
+        result = None
+        async for message in query(prompt=_messages(), options=options):
+            if isinstance(message, ResultMessage):
+                result = message
+        return result
+
+    async def _bounded():
+        return await asyncio.wait_for(_run(), timeout=_SUBSCRIPTION_TIMEOUT_S)
+
+    result = asyncio.run(_bounded())
+    if result is None:
+        raise RuntimeError("Claude subscription call returned no result.")
+    if result.is_error:
+        status = f" (HTTP {result.api_error_status})" if result.api_error_status else ""
+        detail = result.result or "; ".join(result.errors or []) or result.subtype
+        raise RuntimeError(f"Claude subscription call failed{status}: {detail}")
+    if result.structured_output is not None:
+        return json.dumps(result.structured_output, ensure_ascii=False)
+    return extract_json(result.result or "")
+
+
+def _subscription_text(session, model, system_prompt, user_content,
+                       schema_name, json_schema, schema_model) -> str:
+    return _subscription_call(
+        session, model, system_prompt,
+        [{"type": "text", "text": user_content}], json_schema,
+    )
+
+
+def _subscription_images(session, model, prompt, image_paths, schema_name,
+                         json_schema, schema_model, detail, label_images) -> str:
+    blocks: list[dict] = []
+    for index, path in enumerate(image_paths):
+        blocks.append({"type": "image", "source": {
+            "type": "base64", "media_type": "image/jpeg", "data": _image_b64(path),
+        }})
+        if label_images:
+            blocks.append({"type": "text", "text": f"[Image {index}]"})
+    blocks.append({"type": "text", "text": prompt})
+    return _subscription_call(session, model, "", blocks, json_schema)
+
+
 _TEXT_CALLS: dict[str, Callable] = {
     OPENAI: _openai_text,
     OPENAI_COMPATIBLE: _compatible_text,
     GEMINI: _gemini_text,
     ANTHROPIC: _anthropic_text,
+    CLAUDE_SUBSCRIPTION: _subscription_text,
 }
 
 _IMAGE_CALLS: dict[str, Callable] = {
@@ -720,6 +856,7 @@ _IMAGE_CALLS: dict[str, Callable] = {
     OPENAI_COMPATIBLE: _compatible_images,
     GEMINI: _gemini_images,
     ANTHROPIC: _anthropic_images,
+    CLAUDE_SUBSCRIPTION: _subscription_images,
 }
 
 

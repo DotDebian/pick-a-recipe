@@ -34,6 +34,8 @@ FALLBACK_MODELS = {
     # other current ids Google documents for new projects.
     "gemini": ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"],
     "anthropic": ["claude-sonnet-4-5", "claude-haiku-4-5"],
+    # CLI aliases track the current model of each tier, so they never retire.
+    "claude-subscription": ["sonnet", "haiku"],
     "openai-compatible": [],
 }
 
