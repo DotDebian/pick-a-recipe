@@ -400,7 +400,14 @@ def _get_target_lang() -> str:
 def _language_rule(target_lang: str) -> str:
     if target_lang:
         return (f"ALL text content MUST be in {target_lang}. "
-                f"Translate any content that is not already in {target_lang}.")
+                f"Translate any content that is not already in {target_lang}. "
+                f"Name ingredients the way they are sold in supermarkets where "
+                f"{target_lang} is spoken, not as a word-for-word translation: "
+                f"someone has to find them on a shelf. For French, for example, "
+                f"evaporated milk is \"lait concentré non sucré\" (not \"lait évaporé\"), "
+                f"heavy cream is \"crème liquide entière\", all-purpose flour is "
+                f"\"farine de blé T55\", cream cheese is \"fromage frais à tartiner\", "
+                f"half-and-half has no equivalent and is \"moitié lait, moitié crème\".")
     return ("Keep ALL text content in the language the source recipe is written in. "
             "Do NOT translate it.")
 

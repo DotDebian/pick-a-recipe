@@ -75,7 +75,10 @@ Rules:
 5. The note is for buying, not cooking: keep variety, fat content, size, "facultatif"
    (only when every merged line was optional). Drop preparation steps ("coupé en morceaux",
    "cuites al dente", "émincé", seasoning instructions). Keep it short, often empty.
-6. Write food and note in the language the lines are written in. Do not translate.
+6. Write food and note in the language the lines are written in. Do not translate, but
+   fix a word-for-word translation into the name the product is sold under locally
+   (French: "lait évaporé" -> "lait concentré non sucré", "crème épaisse" for heavy cream
+   -> "crème liquide entière").
 7. aisle is the supermarket section, one of the allowed values.
 8. Every input id must appear in exactly one output item's source_ids. Do not drop lines.
 
