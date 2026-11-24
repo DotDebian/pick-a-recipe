@@ -32,7 +32,7 @@ type View = 'week' | 'month'
 
 function useLocaleDate() {
   const { i18n } = useTranslation()
-  const locale = i18n.language === 'he' ? 'he-IL' : 'en-GB'
+  const locale = i18n.language === 'he' ? 'he-IL' : i18n.language === 'fr' ? 'fr-FR' : 'en-GB'
   return (iso: string, opts: Intl.DateTimeFormatOptions) => parseISODate(iso).toLocaleDateString(locale, opts)
 }
 

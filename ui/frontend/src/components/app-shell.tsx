@@ -25,13 +25,14 @@ const TITLES: Record<string, string> = {
 }
 
 function JobFailureNotice() {
+  const { t } = useTranslation()
   useSocketEvent(
     'job_failed',
     useCallback((payload: JobFailedPayload) => {
-      const message = payload.error?.trim() || 'The job failed.'
+      const message = payload.error?.trim() || t('pages.jobFailed')
       // Stay up until dismissed. A short toast was gone before it could be read.
       toast.error(message, { duration: Infinity, id: `job-failed-${payload.job_id}` })
-    }, []),
+    }, [t]),
   )
   return null
 }

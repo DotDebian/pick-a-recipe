@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Trans, useTranslation } from 'react-i18next'
 import { KeyRoundIcon } from 'lucide-react'
 
 import { api } from '@/lib/api'
@@ -18,6 +19,7 @@ const MIN_PASSWORD_LENGTH = 10
 
 /** Change your own password. Shown to every user, admin or not. */
 export function AccountCard({ username }: { username: string }) {
+  const { t } = useTranslation()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -38,9 +40,9 @@ export function AccountCard({ username }: { username: string }) {
       setCurrent('')
       setNext('')
       setConfirm('')
-      toast.success('Password changed')
+      toast.success(t('settings.account.changed'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not change password')
+      toast.error(err instanceof Error ? err.message : t('settings.account.changeFailed'))
     } finally {
       setSaving(false)
     }
@@ -51,17 +53,20 @@ export function AccountCard({ username }: { username: string }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRoundIcon className="size-4" />
-          Your account
+          {t('settings.account.title')}
         </CardTitle>
         <CardDescription>
-          Signed in as <span className="font-medium text-foreground">{username}</span>.
-          Change your password below.
+          <Trans
+            i18nKey="settings.account.description"
+            values={{ username }}
+            components={{ b: <span className="font-medium text-foreground" /> }}
+          />
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex max-w-sm flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="current-password">Current password</Label>
+            <Label htmlFor="current-password">{t('settings.account.current')}</Label>
             <Input
               id="current-password"
               type="password"
@@ -71,7 +76,7 @@ export function AccountCard({ username }: { username: string }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-password">New password</Label>
+            <Label htmlFor="new-password">{t('settings.account.new')}</Label>
             <Input
               id="new-password"
               type="password"
@@ -81,11 +86,11 @@ export function AccountCard({ username }: { username: string }) {
               minLength={MIN_PASSWORD_LENGTH}
             />
             <p className="text-xs text-muted-foreground">
-              At least {MIN_PASSWORD_LENGTH} characters.
+              {t('settings.account.minLength', { count: MIN_PASSWORD_LENGTH })}
             </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="confirm-password">Confirm new password</Label>
+            <Label htmlFor="confirm-password">{t('settings.account.confirm')}</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -97,12 +102,12 @@ export function AccountCard({ username }: { username: string }) {
             />
             {mismatch && (
               <p className="text-xs text-destructive">
-                The two passwords do not match.
+                {t('settings.account.mismatch')}
               </p>
             )}
           </div>
           <Button type="submit" disabled={!canSubmit} className="self-start">
-            {saving ? 'Changing…' : 'Change password'}
+            {saving ? t('settings.account.changing') : t('settings.account.change')}
           </Button>
         </form>
       </CardContent>

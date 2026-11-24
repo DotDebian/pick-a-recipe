@@ -2,12 +2,15 @@ import i18n from 'i18next'
 import { initReactI18next, useTranslation } from 'react-i18next'
 
 import en from '@/locales/en'
+import fr from '@/locales/fr'
 import he from '@/locales/he'
+import { sectionsEn, sectionsFr } from '@/locales/sections'
 import { pickLanguage } from '@/lib/language'
 
 export const LANGUAGES = [
-  { code: 'he', label: 'עברית', dir: 'rtl' },
+  { code: 'fr', label: 'Français', dir: 'ltr' },
   { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'he', label: 'עברית', dir: 'rtl' },
 ] as const
 export type Language = (typeof LANGUAGES)[number]['code']
 
@@ -33,7 +36,12 @@ function applyDocument(lang: string) {
 }
 
 void i18n.use(initReactI18next).init({
-  resources: { en: { translation: en }, he: { translation: he } },
+  resources: {
+    en: { translation: { ...en, ...sectionsEn } },
+    fr: { translation: { ...fr, ...sectionsFr } },
+    // Hebrew has no translation of the section tables yet; i18next falls back to en.
+    he: { translation: he },
+  },
   lng: initialLanguage(),
   fallbackLng: 'en',
   interpolation: { escapeValue: false },

@@ -18,8 +18,13 @@ describe('pickLanguage', () => {
     assert.equal(pickLanguage(null, ['iw']), 'he')
   })
 
+  it('picks French for a French browser and keeps a saved fr', () => {
+    assert.equal(pickLanguage(null, ['fr-FR', 'en']), 'fr')
+    assert.equal(pickLanguage('fr', ['en-US']), 'fr')
+  })
+
   it('falls back to English with no browser languages or a bad saved value', () => {
     assert.equal(pickLanguage(null, []), 'en')
-    assert.equal(pickLanguage('fr', []), 'en')
+    assert.equal(pickLanguage('xx', []), 'en')
   })
 })

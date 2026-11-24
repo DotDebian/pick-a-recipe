@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Trans, useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
+import i18n from '@/i18n'
 import {
   CheckIcon,
   XIcon,
@@ -108,30 +111,30 @@ const BUCKET_ORDER: Record<RowBucket, number> = {
 }
 
 const GROUP_LABEL: Record<RowBucket, string> = {
-  approval: 'Needs you',
-  running: 'In flight',
-  queued: 'In flight',
-  done: 'Settled',
-  failed: 'Settled',
-  cancelled: 'Settled',
+  approval: 'tasks.group.needsYou',
+  running: 'tasks.group.inFlight',
+  queued: 'tasks.group.inFlight',
+  done: 'tasks.group.settled',
+  failed: 'tasks.group.settled',
+  cancelled: 'tasks.group.settled',
 }
 
 const STATUS_DISPLAY: Record<string, { label: string; variant: React.ComponentProps<typeof Badge>['variant']; className?: string }> = {
-  queued:            { label: 'Queued',          variant: 'secondary' },
-  pending:           { label: 'Queued',          variant: 'secondary' },
-  running:           { label: 'Processing',      variant: 'default' },
-  downloading:       { label: 'Downloading',     variant: 'default' },
-  transcribing:      { label: 'Transcribing',    variant: 'default' },
-  extracting:        { label: 'Extracting',      variant: 'default' },
-  creating:          { label: 'Creating recipe', variant: 'default' },
-  processing:        { label: 'Processing',      variant: 'default' },
-  uploading:         { label: 'Uploading',       variant: 'default' },
-  awaiting_approval: { label: 'Needs approval',  variant: 'outline', className: 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400' },
-  success:           { label: 'Done',            variant: 'outline', className: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-  completed:         { label: 'Done',            variant: 'outline', className: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-  failed:            { label: 'Failed',          variant: 'destructive' },
-  cancelled:         { label: 'Cancelled',       variant: 'outline' },
-  expired:           { label: 'Expired',         variant: 'outline' },
+  queued:            { label: 'tasks.status.queued',          variant: 'secondary' },
+  pending:           { label: 'tasks.status.queued',          variant: 'secondary' },
+  running:           { label: 'tasks.status.processing',      variant: 'default' },
+  downloading:       { label: 'tasks.status.downloading',     variant: 'default' },
+  transcribing:      { label: 'tasks.status.transcribing',    variant: 'default' },
+  extracting:        { label: 'tasks.status.extracting',      variant: 'default' },
+  creating:          { label: 'tasks.status.creating', variant: 'default' },
+  processing:        { label: 'tasks.status.processing',      variant: 'default' },
+  uploading:         { label: 'tasks.status.uploading',       variant: 'default' },
+  awaiting_approval: { label: 'tasks.status.needsApproval',  variant: 'outline', className: 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+  success:           { label: 'tasks.status.done',            variant: 'outline', className: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  completed:         { label: 'tasks.status.done',            variant: 'outline', className: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  failed:            { label: 'tasks.status.failed',          variant: 'destructive' },
+  cancelled:         { label: 'tasks.status.cancelled',       variant: 'outline' },
+  expired:           { label: 'tasks.status.expired',         variant: 'outline' },
 }
 
 type FilterBucket = '' | 'approval' | 'running' | 'queued' | 'done' | 'failed' | 'cancelled'
@@ -166,7 +169,7 @@ function normalizeJob(t: Job): TaskRow {
     historyId: null,
     status: t.status,
     bucket: bucketOf(t.status),
-    title: t.video_title || hostOf(t.url) || 'Untitled',
+    title: t.video_title || hostOf(t.url) || i18n.t('tasks.untitled'),
     url: t.url || '',
     message: t.stage_message || '',
     error: t.error_message || '',
@@ -190,7 +193,7 @@ function normalizeHistory(r: CombinedItem): TaskRow {
     historyId: r.id,
     status: r.status,
     bucket: bucketOf(r.status),
-    title: r.recipe_name || r.video_title || hostOf(r.url) || 'Untitled Recipe',
+    title: r.recipe_name || r.video_title || hostOf(r.url) || i18n.t('tasks.untitledRecipe'),
     url: r.url || '',
     message: '',
     error: r.error_message || '',
@@ -240,25 +243,26 @@ function mergeRows(jobs: Job[], recipes: CombinedItem[]): TaskRow[] {
 
 // ===== Relative time =====
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: TFunction, locale: string): string {
   if (!dateStr) return ''
   const date = new Date(String(dateStr).replace(' ', 'T'))
   const diff = Date.now() - date.getTime()
   if (isNaN(diff)) return ''
-  if (diff < 60000) return 'just now'
-  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
-  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
-  if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago'
-  return date.toLocaleDateString()
+  if (diff < 60000) return t('tasks.time.justNow')
+  if (diff < 3600000) return t('tasks.time.minutesAgo', { count: Math.floor(diff / 60000) })
+  if (diff < 86400000) return t('tasks.time.hoursAgo', { count: Math.floor(diff / 3600000) })
+  if (diff < 604800000) return t('tasks.time.daysAgo', { count: Math.floor(diff / 86400000) })
+  return date.toLocaleDateString(locale)
 }
 
 // ===== Status badge =====
 
 function StatusBadge({ status }: { status: string }) {
-  const meta = STATUS_DISPLAY[status] ?? { label: status, variant: 'outline' as const }
+  const { t } = useTranslation()
+  const meta = STATUS_DISPLAY[status]
   return (
-    <Badge variant={meta.variant} className={meta.className}>
-      {meta.label}
+    <Badge variant={meta?.variant ?? 'outline'} className={meta?.className}>
+      {meta ? t(meta.label) : status}
     </Badge>
   )
 }
@@ -273,6 +277,7 @@ interface ApprovalGalleryProps {
 }
 
 function ApprovalGallery({ uploadId, onTitleResolved, selectedIndex, onSelectIndex }: ApprovalGalleryProps) {
+  const { t } = useTranslation()
   const { data } = useQuery<PendingUpload>({
     queryKey: ['pending-upload', uploadId],
     queryFn: () => api.getPendingUpload(uploadId),
@@ -296,8 +301,8 @@ function ApprovalGallery({ uploadId, onTitleResolved, selectedIndex, onSelectInd
   if (data?.recipe) {
     const r = data.recipe
     const ingCount = (r.recipeIngredient?.length ?? 0) + (r.recipeIngredients?.length ?? 0)
-    if (ingCount) summaryBits.push(`${ingCount} ingredients`)
-    if (r.recipeInstructions?.length) summaryBits.push(`${r.recipeInstructions.length} steps`)
+    if (ingCount) summaryBits.push(t('tasks.gallery.ingredients', { count: ingCount }))
+    if (r.recipeInstructions?.length) summaryBits.push(t('tasks.gallery.steps', { count: r.recipeInstructions.length }))
   }
 
   return (
@@ -321,18 +326,19 @@ interface DeleteRowDialogProps {
 }
 
 function DeleteRowDialog({ row, onClose, onConfirm }: DeleteRowDialogProps) {
+  const { t } = useTranslation()
   return (
     <AlertDialog open={row !== null} onOpenChange={(open) => { if (!open) onClose() }}>
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete item?</AlertDialogTitle>
+          <AlertDialogTitle>{t('tasks.deleteDialog.title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone.
+            {t('tasks.deleteDialog.description')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>Delete</AlertDialogAction>
+          <AlertDialogCancel onClick={onClose}>{t('tasks.cancel')}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>{t('tasks.delete')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -347,18 +353,19 @@ interface BulkDeleteDialogProps {
 }
 
 function BulkDeleteDialog({ count, open, onClose, onConfirm }: BulkDeleteDialogProps) {
+  const { t } = useTranslation()
   return (
     <AlertDialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {count} items?</AlertDialogTitle>
+          <AlertDialogTitle>{t('tasks.deleteDialog.bulkTitle', { count })}</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone.
+            {t('tasks.deleteDialog.description')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>Delete all</AlertDialogAction>
+          <AlertDialogCancel onClick={onClose}>{t('tasks.cancel')}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>{t('tasks.deleteAll')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -374,6 +381,7 @@ interface RecipeModalProps {
 }
 
 function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
+  const { t, i18n: i18nInst } = useTranslation()
   const { data, isLoading } = useQuery<HistoryEntry>({
     queryKey: ['history-item', historyId],
     queryFn: () => api.getHistoryItem(historyId!),
@@ -387,13 +395,13 @@ function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
     setReuploadPending(true)
     try {
       await api.reuploadRecipe(data.id, target)
-      toast.success(`Recipe re-uploaded to ${target}!`)
+      toast.success(t('tasks.toast.reuploaded', { target }))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Re-upload failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.reuploadFailed'))
     } finally {
       setReuploadPending(false)
     }
-  }, [data])
+  }, [data, t])
 
   const canReupload = data?.status === 'success' && data.recipe_data != null
 
@@ -402,7 +410,7 @@ function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {isLoading ? 'Loading…' : (data?.recipe_name || data?.video_title || 'Recipe Details')}
+            {isLoading ? t('tasks.loading') : (data?.recipe_name || data?.video_title || t('tasks.recipeModal.defaultTitle'))}
           </DialogTitle>
         </DialogHeader>
 
@@ -419,7 +427,7 @@ function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
             {data.thumbnail_data && (
               <img
                 src={`data:image/jpeg;base64,${data.thumbnail_data}`}
-                alt={data.recipe_name ?? 'Recipe'}
+                alt={data.recipe_name ?? t('tasks.recipeModal.recipeAlt')}
                 className="w-full rounded-lg object-cover max-h-48"
               />
             )}
@@ -436,8 +444,8 @@ function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
                   </a>
                 </p>
               )}
-              <p>Created: {new Date(String(data.created_at).replace(' ', 'T')).toLocaleString()}</p>
-              {data.output_target && <p>Uploaded to: {data.output_target}</p>}
+              <p>{t('tasks.recipeModal.created', { date: new Date(String(data.created_at).replace(' ', 'T')).toLocaleString(i18nInst.language) })}</p>
+              {data.output_target && <p>{t('tasks.recipeModal.uploadedTo', { target: data.output_target })}</p>}
             </div>
             {data.recipe_data && <RecipeView recipe={data.recipe_data} />}
           </div>
@@ -452,14 +460,14 @@ function RecipeModal({ historyId, onClose, onDelete }: RecipeModalProps) {
                 onClick={() => onDelete(data.id)}
               >
                 <Trash2Icon />
-                Delete
+                {t('tasks.delete')}
               </Button>
               {canReupload && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" disabled={reuploadPending}>
                       <UploadCloudIcon />
-                      Re-upload
+                      {t('tasks.reupload')}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -495,6 +503,7 @@ function ApprovalReviewDialog({
   onClose,
   onConfirmed,
 }: ApprovalReviewDialogProps) {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery<PendingUpload>({
     queryKey: ['pending-upload', uploadId],
     queryFn: () => api.getPendingUpload(uploadId!),
@@ -532,23 +541,24 @@ function ApprovalReviewDialog({
         selected_image_index: selectedIndex,
         recipe,
       })
-      toast.success('Approved — uploading…')
+      toast.success(t('tasks.toast.approved'))
       onConfirmed()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Approve failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.approveFailed'))
     } finally {
       setSaving(false)
     }
-  }, [uploadId, recipe, selectedIndex, onConfirmed])
+  }, [uploadId, recipe, selectedIndex, onConfirmed, t])
 
   return (
     <Dialog open={uploadId !== null} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="flex max-h-[calc(100svh-1rem)] flex-col gap-4 overflow-y-auto overscroll-contain sm:max-w-2xl">
         <DialogHeader className="shrink-0 pr-8">
-          <DialogTitle>Review recipe</DialogTitle>
+          <DialogTitle>{t('tasks.review.title')}</DialogTitle>
           <DialogDescription>
-            Edit the recipe, then confirm to upload
-            {data?.output_target ? ` to ${data.output_target}` : ''}.
+            {data?.output_target
+              ? t('tasks.review.descriptionTo', { target: data.output_target })
+              : t('tasks.review.description')}
           </DialogDescription>
         </DialogHeader>
         {isLoading && (
@@ -571,10 +581,10 @@ function ApprovalReviewDialog({
         )}
         <DialogFooter className="sticky bottom-0 z-10 mb-0 shrink-0 bg-muted">
           <Button variant="outline" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('tasks.cancel')}
           </Button>
           <Button onClick={() => void handleConfirm()} disabled={saving || !recipe}>
-            Confirm upload
+            {t('tasks.review.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -611,6 +621,7 @@ function TaskRowItem({
   onDeleteRow,
   onReupload,
 }: TaskRowProps) {
+  const { t, i18n: i18nInst } = useTranslation()
   const isTerminal = TERMINAL_STATUSES.has(row.status)
   const isApproval = row.bucket === 'approval'
   const isQueued = row.bucket === 'queued'
@@ -622,7 +633,7 @@ function TaskRowItem({
 
   const displayTitle = resolvedTitle ?? row.title
 
-  const metaBits: string[] = [relativeTime(row.updatedAt || row.createdAt)]
+  const metaBits: string[] = [relativeTime(row.updatedAt || row.createdAt, t, i18nInst.language)]
   if (row.bucket === 'done' && row.outputTarget) metaBits.push('→ ' + row.outputTarget)
   const h = hostOf(row.url)
   if (h && row.bucket === 'done') metaBits.push(h)
@@ -642,7 +653,7 @@ function TaskRowItem({
     >
       <input
         type="checkbox"
-        aria-label="Select task"
+        aria-label={t('tasks.selectTask')}
         checked={selected}
         className="mt-1 shrink-0 accent-primary"
         onChange={(e) => onSelect(row.key, e.target.checked)}
@@ -698,8 +709,10 @@ function TaskRowItem({
         )}
         {(row.status === 'failed' || row.status === 'expired') && (
           <p className="text-xs text-muted-foreground">
-            To report this, set <span className="font-mono">LOG_LEVEL=debug</span>, restart,
-            repeat it, and paste the container log into a bug report.
+            <Trans
+              i18nKey="tasks.reportHint"
+              components={{ mono: <span className="font-mono" /> }}
+            />
           </p>
         )}
       </div>
@@ -711,7 +724,7 @@ function TaskRowItem({
             onClick={() => onReview(row.pendingUploadId!, selectedImageIndex)}
           >
             <CheckIcon />
-            Approve
+            {t('tasks.approve')}
           </Button>
         )}
         {(row.status === 'failed' || row.status === 'expired') && (
@@ -727,7 +740,7 @@ function TaskRowItem({
             }}
           >
             <RotateCcwIcon />
-            Retry
+            {t('tasks.retry')}
           </Button>
         )}
         {isSuccess && (
@@ -737,7 +750,7 @@ function TaskRowItem({
             onClick={() => onViewRecipe(row.historyId!)}
           >
             <EyeIcon />
-            View
+            {t('tasks.view')}
           </Button>
         )}
 
@@ -745,21 +758,21 @@ function TaskRowItem({
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm">
               <MoreVerticalIcon />
-              <span className="sr-only">More actions</span>
+              <span className="sr-only">{t('tasks.moreActions')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {isSuccess && (
               <DropdownMenuItem onClick={() => onViewRecipe(row.historyId!)}>
                 <EyeIcon />
-                View recipe
+                {t('tasks.viewRecipe')}
               </DropdownMenuItem>
             )}
             {isSuccess && (
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <UploadCloudIcon />
-                  Re-upload
+                  {t('tasks.reupload')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onClick={() => onReupload(row.historyId!, 'tandoor')}>
@@ -779,18 +792,18 @@ function TaskRowItem({
                 onClick={() => onReject(row.pendingUploadId!)}
               >
                 <XIcon />
-                Reject
+                {t('tasks.reject')}
               </DropdownMenuItem>
             )}
             {isQueued && row.jobId && (
               <>
                 <DropdownMenuItem onClick={() => onPriorityShift(row.jobId!, +1)}>
                   <ArrowUpIcon />
-                  Move earlier
+                  {t('tasks.moveEarlier')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onPriorityShift(row.jobId!, -1)}>
                   <ArrowDownIcon />
-                  Move later
+                  {t('tasks.moveLater')}
                 </DropdownMenuItem>
               </>
             )}
@@ -802,7 +815,7 @@ function TaskRowItem({
                   onClick={() => onCancelJob(row.jobId!)}
                 >
                   <BanIcon />
-                  Cancel job
+                  {t('tasks.cancelJob')}
                 </DropdownMenuItem>
               </>
             )}
@@ -814,7 +827,7 @@ function TaskRowItem({
                   onClick={() => onDeleteRow(row)}
                 >
                   <Trash2Icon />
-                  Delete
+                  {t('tasks.delete')}
                 </DropdownMenuItem>
               </>
             )}
@@ -860,16 +873,17 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
 // ===== Main page =====
 
 const FILTER_OPTIONS: { value: FilterBucket; label: string }[] = [
-  { value: '', label: 'All' },
-  { value: 'approval', label: 'Needs approval' },
-  { value: 'running', label: 'Running' },
-  { value: 'queued', label: 'Queued' },
-  { value: 'done', label: 'Done' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: '', label: 'tasks.filter.all' },
+  { value: 'approval', label: 'tasks.filter.approval' },
+  { value: 'running', label: 'tasks.filter.running' },
+  { value: 'queued', label: 'tasks.filter.queued' },
+  { value: 'done', label: 'tasks.filter.done' },
+  { value: 'failed', label: 'tasks.filter.failed' },
+  { value: 'cancelled', label: 'tasks.filter.cancelled' },
 ]
 
 export function TasksPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { data: session } = useSession()
@@ -986,21 +1000,21 @@ export function TasksPage() {
   const handleReject = useCallback(async (uploadId: string) => {
     try {
       await api.cancelPendingUpload(uploadId)
-      toast.success('Rejected')
+      toast.success(t('tasks.toast.rejected'))
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Reject failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.rejectFailed'))
     }
-  }, [invalidate])
+  }, [invalidate, t])
 
   const handleCancelJob = useCallback(async (jobId: string) => {
     try {
       await api.cancelJob(jobId)
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Cancel failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.cancelFailed'))
     }
-  }, [invalidate])
+  }, [invalidate, t])
 
   const handlePriorityShift = useCallback(async (jobId: string, delta: number) => {
     const row = rows.find((r) => r.jobId === jobId)
@@ -1009,28 +1023,28 @@ export function TasksPage() {
       await api.setJobPriority(jobId, current + delta)
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Priority update failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.priorityFailed'))
     }
-  }, [rows, invalidate])
+  }, [rows, invalidate, t])
 
   const handleRetry = useCallback(async (url: string, historyId: number) => {
     try {
       const data = await api.retryJob({ url, history_id: historyId || undefined })
-      toast.success('Retry started!')
+      toast.success(t('tasks.toast.retryStarted'))
       void navigate(`/jobs/${data.job_id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Retry failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.retryFailed'))
     }
-  }, [navigate])
+  }, [navigate, t])
 
   const handleReupload = useCallback(async (historyId: number, target: string) => {
     try {
       await api.reuploadRecipe(historyId, target)
-      toast.success(`Recipe re-uploaded to ${target}!`)
+      toast.success(t('tasks.toast.reuploaded', { target }))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Re-upload failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.reuploadFailed'))
     }
-  }, [])
+  }, [t])
 
   const handleDeleteRow = useCallback(async (row: TaskRow) => {
     try {
@@ -1039,12 +1053,12 @@ export function TasksPage() {
       } else if (row.jobId) {
         await api.deleteJobEntry(row.jobId)
       }
-      toast.success('Item deleted')
+      toast.success(t('tasks.toast.itemDeleted'))
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Delete failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.deleteFailed'))
     }
-  }, [invalidate])
+  }, [invalidate, t])
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteRow) return
@@ -1056,13 +1070,18 @@ export function TasksPage() {
     if (!ids.length) return
     try {
       const res = await api.bulkTaskAction(action, ids)
-      toast.success(`${res.succeeded} ${action}d, ${res.failed} skipped`)
+      toast.success(
+        t(`tasks.toast.bulk${action[0].toUpperCase()}${action.slice(1)}`, {
+          succeeded: res.succeeded,
+          failed: res.failed,
+        }),
+      )
       setSelected(new Set())
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk action failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.bulkFailed'))
     }
-  }, [selected, invalidate])
+  }, [selected, invalidate, t])
 
   const handleBulkDelete = useCallback(async () => {
     const historyIds: number[] = []
@@ -1074,13 +1093,13 @@ export function TasksPage() {
     if (!historyIds.length && !jobIds.length) return
     try {
       const data = await api.bulkDelete({ history_ids: historyIds, job_ids: jobIds })
-      toast.success(`Deleted ${data.deleted_count} items`)
+      toast.success(t('tasks.toast.bulkDeleted', { count: data.deleted_count }))
       setSelected(new Set())
       invalidate()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Bulk delete failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.toast.bulkDeleteFailed'))
     }
-  }, [selected, invalidate])
+  }, [selected, invalidate, t])
 
   const handleRecipeDelete = useCallback((historyId: number) => {
     setDeleteAfterCloseId(historyId)
@@ -1105,9 +1124,9 @@ export function TasksPage() {
   return (
     <div className="flex flex-col gap-4 p-4 sm:p-6">
       <div>
-        <h1 className="text-xl font-semibold">Tasks</h1>
+        <h1 className="text-xl font-semibold">{t('tasks.title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Live jobs up top — everything that finished settles below as Done
+          {t('tasks.subtitle')}
         </p>
       </div>
 
@@ -1115,7 +1134,7 @@ export function TasksPage() {
         <div className="relative flex-1 min-w-48">
           <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search tasks…"
+            placeholder={t('tasks.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
@@ -1131,7 +1150,7 @@ export function TasksPage() {
               onClick={() => setFilter(opt.value)}
               className="relative"
             >
-              {opt.label}
+              {t(opt.label)}
               {opt.value === 'approval' && approvalCount > 0 && (
                 <span className="ml-1 rounded-full bg-amber-500 px-1 text-xs text-white">
                   {approvalCount}
@@ -1152,35 +1171,35 @@ export function TasksPage() {
               onChange={(e) => handleSelectAll(e.target.checked)}
               className="accent-primary"
             />
-            Select all
+            {t('tasks.selectAll')}
           </label>
         )}
 
         <Button size="sm" variant="outline" onClick={invalidate}>
           <RefreshCwIcon />
-          Refresh
+          {t('tasks.refresh')}
         </Button>
       </div>
 
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
-          <span className="text-sm font-medium">{selected.size} selected</span>
+          <span className="text-sm font-medium">{t('tasks.selectedCount', { count: selected.size })}</span>
           {hasApproval && (
             <Button size="sm" onClick={() => void handleBulkAction('approve')}>
               <CheckIcon />
-              Approve
+              {t('tasks.approve')}
             </Button>
           )}
           {hasApproval && (
             <Button size="sm" variant="destructive" onClick={() => void handleBulkAction('reject')}>
               <XIcon />
-              Reject
+              {t('tasks.reject')}
             </Button>
           )}
           {hasCancellable && (
             <Button size="sm" variant="secondary" onClick={() => void handleBulkAction('cancel')}>
               <BanIcon />
-              Cancel jobs
+              {t('tasks.cancelJobs')}
             </Button>
           )}
           <Button
@@ -1189,7 +1208,7 @@ export function TasksPage() {
             onClick={() => setShowBulkDelete(true)}
           >
             <Trash2Icon />
-            Delete
+            {t('tasks.delete')}
           </Button>
         </div>
       )}
@@ -1208,15 +1227,15 @@ export function TasksPage() {
             <InboxIcon className="size-10 opacity-40" />
             <p className="text-sm">
               {rows.length > 0
-                ? 'Nothing matches the current search or filter.'
-                : 'Nothing here right now.'}
+                ? t('tasks.empty.noMatch')
+                : t('tasks.empty.none')}
             </p>
           </div>
         )}
 
         {grouped.map((group) => (
           <div key={group.label} className="space-y-1">
-            <GroupHeader label={group.label} count={group.rows.length} />
+            <GroupHeader label={t(group.label)} count={group.rows.length} />
             {group.rows.map((row) => (
               <TaskRowItem
                 key={row.key}

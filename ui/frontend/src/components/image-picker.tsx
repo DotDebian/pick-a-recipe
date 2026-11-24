@@ -1,4 +1,5 @@
 import { StarIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import type { CandidateImage } from '@/types'
 
@@ -9,15 +10,16 @@ interface ImagePickerProps {
 }
 
 export function ImagePicker({ images, value, onChange }: ImagePickerProps) {
+  const { t } = useTranslation()
   if (images.length === 0) return null
 
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
-        Select the best photo for your recipe
+        {t('tasks.imagePicker.prompt')}
         {images.some((i) => i.is_best) && (
           <span className="ml-1">
-            (<StarIcon className="inline size-3 text-amber-500" /> = AI pick)
+            (<StarIcon className="inline size-3 text-amber-500" /> {t('tasks.imagePicker.aiPick')})
           </span>
         )}
       </p>
@@ -36,7 +38,7 @@ export function ImagePicker({ images, value, onChange }: ImagePickerProps) {
           >
             <img
               src={`data:image/jpeg;base64,${img.data}`}
-              alt={`Dish candidate ${img.index + 1}`}
+              alt={t('tasks.imagePicker.candidateAlt', { n: img.index + 1 })}
               className="size-full object-cover"
             />
             {img.is_best && (

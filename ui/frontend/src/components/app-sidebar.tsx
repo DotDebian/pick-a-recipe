@@ -57,7 +57,9 @@ export function AppSidebar() {
   const libraryCount = library?.total ?? 0
 
   const badges: Record<string, number> = { tasks: approvalsCount, shopping: shoppingCount, library: libraryCount }
-  const nextLanguage = LANGUAGES.find((l) => l.code !== i18n.language) ?? LANGUAGES[0]
+  // Cycles through the languages; the button names the one it switches to.
+  const currentIndex = LANGUAGES.findIndex((l) => i18n.language.startsWith(l.code))
+  const nextLanguage = LANGUAGES[(currentIndex + 1) % LANGUAGES.length]
 
   const renderItems = (items: readonly { key: string; to: string; icon: typeof Home }[]) => (
     <SidebarMenu>

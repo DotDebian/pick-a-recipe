@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import {
   SparklesIcon,
@@ -38,6 +39,7 @@ function isValidUrl(s: string): boolean {
 }
 
 export function HomePage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: session } = useSession()
 
@@ -111,31 +113,35 @@ export function HomePage() {
     (p: JobCompletePayload) => {
       invalidateJobs()
       void queryClient.invalidateQueries({ queryKey: ['history-recent'] })
-      toast.success(`Recipe "${p.recipe.name || 'Untitled'}" created successfully!`)
+      toast.success(
+        t('pages.home.recipeCreated', {
+          name: p.recipe.name || t('pages.home.untitled'),
+        }),
+      )
     },
-    [invalidateJobs, queryClient],
+    [invalidateJobs, queryClient, t],
   )
 
   const handleJobFailed = useCallback(
     (p: JobFailedPayload) => {
       invalidateJobs()
       void queryClient.invalidateQueries({ queryKey: ['history-recent-failed'] })
-      const message = p.error?.trim() || 'The job failed.'
+      const message = p.error?.trim() || t('pages.jobFailed')
       setLiveFailures((prev) => [
         { key: `job:${p.job_id}`, message },
         ...prev.filter((item) => item.key !== `job:${p.job_id}`),
       ])
       toast.error(message, { duration: Infinity, id: `job-failed-${p.job_id}` })
     },
-    [invalidateJobs, queryClient],
+    [invalidateJobs, queryClient, t],
   )
 
   const handleJobCancelled = useCallback(
     (_p: { job_id: string }) => {
       invalidateJobs()
-      toast.info('Job cancelled')
+      toast.info(t('pages.home.jobCancelled'))
     },
-    [invalidateJobs],
+    [invalidateJobs, t],
   )
 
   const handleTransition = useCallback(
@@ -165,8 +171,8 @@ export function HomePage() {
       setUrlInput('')
       toast.success(
         data.queue_position > 1
-          ? `Job queued (position ${data.queue_position})`
-          : 'Job started!',
+          ? t('pages.home.jobQueued', { position: data.queue_position })
+          : t('pages.home.jobStarted'),
       )
     },
     onError: (err: Error) => {
@@ -179,7 +185,7 @@ export function HomePage() {
     onSuccess: (data) => {
       invalidateJobs()
       setBatchInput('')
-      toast.success(`Queued ${data.count} job(s)`)
+      toast.success(t('pages.home.batchQueued', { count: data.count }))
     },
     onError: (err: Error) => {
       toast.error(err.message)
@@ -199,20 +205,20 @@ export function HomePage() {
   const handleSubmit = useCallback(() => {
     const url = urlInput.trim()
     if (!url) {
-      toast.error('Please enter a video URL')
+      toast.error(t('pages.home.enterUrl'))
       return
     }
     if (!isValidUrl(url)) {
-      toast.error('Please enter a valid URL')
+      toast.error(t('pages.home.invalidUrl'))
       return
     }
     createJobMutation.mutate(url)
-  }, [urlInput, createJobMutation])
+  }, [urlInput, createJobMutation, t])
 
   const handleBatchSubmit = useCallback(() => {
     const raw = batchInput.trim()
     if (!raw) {
-      toast.error('Enter at least one URL')
+      toast.error(t('pages.home.enterAtLeastOne'))
       return
     }
     const urls = raw
@@ -220,11 +226,11 @@ export function HomePage() {
       .map((u) => u.trim())
       .filter(Boolean)
     if (urls.length > 50) {
-      toast.error('Maximum 50 URLs per batch')
+      toast.error(t('pages.home.maxBatch'))
       return
     }
     batchJobsMutation.mutate(urls)
-  }, [batchInput, batchJobsMutation])
+  }, [batchInput, batchJobsMutation, t])
 
   if (
     sharedUrl &&
@@ -241,9 +247,9 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold">Pick-a-Recipe</h1>
+        <h1 className="text-2xl font-bold">{t('nav.app')}</h1>
         <p className="text-sm text-muted-foreground">
-          Extract recipes from TikTok, YouTube, Instagram and more
+          {t('pages.home.tagline')}
         </p>
       </div>
 
@@ -251,7 +257,7 @@ export function HomePage() {
         <div className="flex gap-2">
           <Input
             type="url"
-            placeholder="Paste URL here (TikTok, YouTube, Instagram, or any recipe website…)"
+            placeholder={t('pages.home.pasteUrl')}
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             onKeyDown={(e) => {
@@ -267,7 +273,7 @@ export function HomePage() {
             disabled={createJobMutation.isPending}
           >
             <SparklesIcon />
-            Extract Recipe
+            {t('pages.home.extractRecipe')}
           </Button>
         </div>
 
@@ -280,13 +286,13 @@ export function HomePage() {
             <ChevronDownIcon
               className={`size-3.5 transition-transform ${batchOpen ? 'rotate-180' : ''}`}
             />
-            Batch import (multiple URLs)
+            {t('pages.home.batchImport')}
           </button>
           {batchOpen && (
             <div className="space-y-2 border-t px-3 pb-3 pt-2">
               <Textarea
                 rows={4}
-                placeholder="One URL per line (max 50)…"
+                placeholder={t('pages.home.batchPlaceholder')}
                 value={batchInput}
                 onChange={(e) => setBatchInput(e.target.value)}
                 className="w-full resize-none text-sm"
@@ -298,7 +304,7 @@ export function HomePage() {
                 disabled={batchJobsMutation.isPending}
               >
                 <LayersIcon />
-                Queue All
+                {t('pages.home.queueAll')}
               </Button>
             </div>
           )}
@@ -317,7 +323,7 @@ export function HomePage() {
               <button
                 type="button"
                 className="shrink-0 rounded-md p-1 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-                aria-label="Dismiss error"
+                aria-label={t('pages.home.dismissError')}
                 onClick={() =>
                   setDismissedFailures((prev) =>
                     prev.includes(notice.key) ? prev : [...prev, notice.key],
@@ -334,7 +340,7 @@ export function HomePage() {
       {(activeJobs.length > 0 || jobsLoading) && (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            Active Jobs
+            {t('pages.home.activeJobs')}
             {!jobsLoading && (
               <span className="text-xs font-normal text-muted-foreground">
                 ({activeJobs.length})
@@ -363,7 +369,7 @@ export function HomePage() {
 
       {(recentCompleted.length > 0 || historyLoading) && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Recently Completed</h2>
+          <h2 className="text-sm font-semibold">{t('pages.home.recentlyCompleted')}</h2>
           {historyLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-12 w-full rounded-lg" />
@@ -378,13 +384,13 @@ export function HomePage() {
                 >
                   <CheckCircle2Icon className="size-4 shrink-0 text-emerald-500" />
                   <span className="flex-1 truncate font-medium">
-                    {entry.recipe_name ?? entry.video_title ?? 'Untitled Recipe'}
+                    {entry.recipe_name ?? entry.video_title ?? t('pages.home.untitledRecipe')}
                   </span>
                   <Link
                     to="/tasks"
                     className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    View
+                    {t('pages.home.view')}
                   </Link>
                 </div>
               ))}
@@ -393,7 +399,7 @@ export function HomePage() {
           <Link to="/tasks">
             <Button variant="secondary" size="sm">
               <ListChecksIcon />
-              View All Tasks
+              {t('pages.home.viewAllTasks')}
             </Button>
           </Link>
         </section>

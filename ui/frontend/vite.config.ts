@@ -12,7 +12,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      includeAssets: ['favicon.ico', 'favicon-*.png', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: 'pick-a-recipe-pwa',
         name: 'Pick-a-Recipe',

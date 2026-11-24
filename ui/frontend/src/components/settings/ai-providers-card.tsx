@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { PlusIcon, SearchIcon, ServerIcon, Trash2Icon } from 'lucide-react'
 
 import { api } from '@/lib/api'
@@ -29,9 +31,9 @@ function slugify(name: string): string {
   )
 }
 
-function usd(value: number | null): string {
+function usd(value: number | null, t: TFunction): string {
   if (value === null) return '?'
-  if (value === 0) return 'free'
+  if (value === 0) return t('settings.providers.free')
   return `$${value < 0.1 ? value.toFixed(3) : value < 10 ? value.toFixed(2) : value.toFixed(0)}`
 }
 
@@ -40,16 +42,25 @@ function contextSize(tokens: number | null): string {
   return tokens >= 1_000_000 ? `${+(tokens / 1_000_000).toFixed(1)}M` : `${Math.round(tokens / 1000)}K`
 }
 
-function priceLine(model: CatalogModel): string {
-  if (model.unit === 'minute') return model.input_cost === 0 ? 'Free' : `${usd(model.input_cost)} / min`
-  if (model.input_cost === 0 && model.output_cost === 0) return 'Free'
-  return `${usd(model.input_cost)} in · ${usd(model.output_cost)} out`
+function priceLine(model: CatalogModel, t: TFunction): string {
+  if (model.unit === 'minute') {
+    return model.input_cost === 0
+      ? t('settings.providers.freeCap')
+      : t('settings.providers.perMin', { price: usd(model.input_cost, t) })
+  }
+  if (model.input_cost === 0 && model.output_cost === 0) return t('settings.providers.freeCap')
+  return t('settings.providers.inOut', {
+    in: usd(model.input_cost, t),
+    out: usd(model.output_cost, t),
+  })
 }
 
-function priceSummary(model: CatalogModel): string {
-  const unit = model.unit === 'minute' ? 'of audio' : 'per million tokens'
-  const context = model.context ? ` · ${contextSize(model.context)} context` : ''
-  return `${model.id}: ${priceLine(model)} ${unit}${context}.`
+function priceSummary(model: CatalogModel, t: TFunction): string {
+  const unit = model.unit === 'minute' ? t('settings.providers.unitAudio') : t('settings.providers.unitTokens')
+  const context = model.context
+    ? ` · ${t('settings.providers.contextSize', { size: contextSize(model.context) })}`
+    : ''
+  return t('settings.providers.priceSummary', { id: model.id, line: priceLine(model, t), unit, context })
 }
 
 // Unknown prices sort last, so "cheapest" never opens on a model nobody can price.
@@ -65,7 +76,7 @@ const blendedCost = (m: CatalogModel) =>
 export function ModelField({
   catalog,
   task = 'chat',
-  label = 'Model',
+  label,
   value,
   defaultModel = '',
   onChange,
@@ -80,6 +91,7 @@ export function ModelField({
   onChange: (value: string) => void
   placeholder: string
 }) {
+  const { t } = useTranslation()
   const listId = useId()
   const [browsing, setBrowsing] = useState(false)
   const [search, setSearch] = useState('')
@@ -105,7 +117,7 @@ export function ModelField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={listId}>{label}</Label>
+        <Label htmlFor={listId}>{label ?? t('settings.providers.model')}</Label>
         {models.length > 0 && (
           <button
             type="button"
@@ -113,7 +125,9 @@ export function ModelField({
             aria-expanded={browsing}
             onClick={() => setBrowsing(v => !v)}
           >
-            {browsing ? 'Hide models' : `Browse ${models.length} models`}
+            {browsing
+              ? t('settings.providers.hideModels')
+              : t('settings.providers.browseModels', { count: models.length })}
           </button>
         )}
       </div>
@@ -134,7 +148,7 @@ export function ModelField({
               <SearchIcon className="pointer-events-none absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search models"
+                placeholder={t('settings.providers.searchModels')}
                 className="h-8 ps-7 text-sm"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -145,14 +159,14 @@ export function ModelField({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="cheapest">Cheapest</SelectItem>
+                <SelectItem value="newest">{t('settings.providers.newest')}</SelectItem>
+                <SelectItem value="cheapest">{t('settings.providers.cheapest')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <ul className="max-h-72 overflow-y-auto" role="listbox" aria-label="Models">
+          <ul className="max-h-72 overflow-y-auto" role="listbox" aria-label={t('settings.providers.modelsAria')}>
             {shown.length === 0 && (
-              <li className="px-2 py-3 text-center text-xs text-muted-foreground">No model matches.</li>
+              <li className="px-2 py-3 text-center text-xs text-muted-foreground">{t('settings.providers.noMatch')}</li>
             )}
             {shown.map(model => (
               <li key={model.id}>
@@ -174,9 +188,11 @@ export function ModelField({
                     <span className="block truncate font-mono text-[11px] text-muted-foreground">{model.id}</span>
                   </span>
                   <span className="shrink-0 text-end text-xs tabular-nums">
-                    <span className="block">{priceLine(model)}</span>
+                    <span className="block">{priceLine(model, t)}</span>
                     {model.context && (
-                      <span className="block text-muted-foreground">{contextSize(model.context)} context</span>
+                      <span className="block text-muted-foreground">
+                        {t('settings.providers.contextSize', { size: contextSize(model.context) })}
+                      </span>
                     )}
                   </span>
                 </button>
@@ -187,10 +203,10 @@ export function ModelField({
       )}
       <p className="text-xs text-muted-foreground">
         {selected
-          ? priceSummary(selected)
+          ? priceSummary(selected, t)
           : isLoading
-            ? 'Loading models…'
-            : `Any model name works.${models.length ? ' Prices are in USD.' : ''}`}
+            ? t('settings.providers.loadingModels')
+            : `${t('settings.providers.anyModel')}${models.length ? ` ${t('settings.providers.pricesUsd')}` : ''}`}
       </p>
     </div>
   )
@@ -200,47 +216,42 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1'
 
 interface Kind {
   value: string
-  label: string
   api_type: string
   /** Fixed endpoint for a known gateway, so its base URL never has to be typed. */
   base_url?: string
   key_placeholder?: string
-  key_hint?: string
+  /** Whether `settings.providers.kinds.<value>.hint` / `.link` exist. */
+  has_hint?: boolean
+  has_link?: boolean
   key_url?: string
-  key_link_label?: string
 }
 
 // What people pick from. OpenRouter is an OpenAI-compatible endpoint to the
 // server; here it is just another provider, with its address filled in.
 const KINDS: Kind[] = [
-  { value: 'openai', label: 'OpenAI', api_type: 'openai' },
-  { value: 'gemini', label: 'Google Gemini', api_type: 'gemini' },
-  { value: 'anthropic', label: 'Anthropic (Claude)', api_type: 'anthropic' },
-  {
-    value: 'claude-subscription',
-    label: 'Claude subscription (Pro/Max)',
-    api_type: 'claude-subscription',
-  },
+  { value: 'openai', api_type: 'openai' },
+  { value: 'gemini', api_type: 'gemini' },
+  { value: 'anthropic', api_type: 'anthropic' },
+  { value: 'claude-subscription', api_type: 'claude-subscription' },
   {
     value: 'openrouter',
-    label: 'OpenRouter',
     api_type: 'openai-compatible',
     base_url: OPENROUTER_URL,
     key_placeholder: 'sk-or-...',
-    key_hint: 'One key reaches models from OpenAI, Google, Anthropic, Meta and more, paid from one balance.',
+    has_hint: true,
+    has_link: true,
     key_url: 'https://openrouter.ai/keys',
-    key_link_label: 'Create an OpenRouter key',
   },
   {
     value: 'openai-compatible',
-    label: 'Other OpenAI-compatible (Groq, Ollama…)',
     api_type: 'openai-compatible',
-    key_hint: 'Use the key from that service. A local server such as Ollama needs no key.',
+    has_hint: true,
     key_url: '',
   },
 ]
 
-const shortName = (kind: Kind) => kind.label.replace(/ \(.*\)$/, '')
+const kindLabel = (kind: Kind, t: TFunction) => t(`settings.providers.kinds.${kind.value}.label`)
+const shortName = (kind: Kind, t: TFunction) => kindLabel(kind, t).replace(/ \(.*\)$/, '')
 
 function kindOf(provider: AiProvider): Kind {
   if (provider.api_type === 'openai-compatible' && hostOf(provider.base_url) === 'openrouter.ai') {
@@ -256,6 +267,7 @@ export function AiProvidersCard({
   providers: AiProvider[] | null
   onChange: (providers: AiProvider[]) => void
 }) {
+  const { t } = useTranslation()
   const { data } = useQuery({
     queryKey: ['aiProviders'],
     queryFn: api.aiProviders,
@@ -291,14 +303,14 @@ export function AiProvidersCard({
     if (previous.value === next.value) return
     // A name still matching the old kind was never really chosen, so it
     // follows the new one. The model belongs to the old vendor either way.
-    const renamed = !provider.name.trim() || provider.name === shortName(previous)
+    const renamed = !provider.name.trim() || provider.name === shortName(previous, t)
     update(index, {
       api_type: next.api_type,
       base_url: next.base_url ?? '',
       model: '',
       ...(renamed && {
-        name: shortName(next),
-        id: isSaved(provider) ? provider.id : slugify(shortName(next)),
+        name: shortName(next, t),
+        id: isSaved(provider) ? provider.id : slugify(shortName(next, t)),
       }),
     })
   }
@@ -308,18 +320,16 @@ export function AiProvidersCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ServerIcon className="size-4" />
-          AI Providers
+          {t('settings.providers.title')}
         </CardTitle>
         <CardDescription>
-          Your AI accounts: OpenAI, Gemini, Claude, OpenRouter, a local Ollama or any
-          other OpenAI-compatible endpoint. Each has a key and a default model. Which
-          account does which job is chosen under AI Tasks below.
+          {t('settings.providers.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {rows.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No providers yet. Add one to start extracting recipes.
+            {t('settings.providers.empty')}
           </p>
         )}
 
@@ -327,9 +337,13 @@ export function AiProvidersCard({
           const spec = apiTypes[provider.api_type]
           const kind = kindOf(provider)
           const keyPlaceholder = kind.key_placeholder ?? spec?.key_placeholder ?? 'sk-...'
-          const keyHint = kind.key_hint ?? spec?.key_hint
+          const keyHint = kind.has_hint
+            ? t(`settings.providers.kinds.${kind.value}.hint`)
+            : spec?.key_hint
           const keyUrl = kind.key_url ?? spec?.key_url
-          const keyLinkLabel = kind.key_link_label ?? spec?.key_link_label
+          const keyLinkLabel = kind.has_link
+            ? t(`settings.providers.kinds.${kind.value}.link`)
+            : spec?.key_link_label
           return (
             <div
               key={index}
@@ -337,7 +351,7 @@ export function AiProvidersCard({
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <Label>Name</Label>
+                  <Label>{t('settings.providers.name')}</Label>
                   <Input
                     type="text"
                     placeholder="OpenAI"
@@ -355,7 +369,7 @@ export function AiProvidersCard({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label>Provider</Label>
+                  <Label>{t('settings.providers.provider')}</Label>
                   <Select
                     value={kind.value}
                     onValueChange={v => changeKind(index, provider, KINDS.find(k => k.value === v)!)}
@@ -366,7 +380,7 @@ export function AiProvidersCard({
                     <SelectContent>
                       {KINDS.map(k => (
                         <SelectItem key={k.value} value={k.value}>
-                          {k.label}
+                          {kindLabel(k, t)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -376,7 +390,7 @@ export function AiProvidersCard({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <Label>API key</Label>
+                  <Label>{t('settings.providers.apiKey')}</Label>
                   <Input
                     type="password"
                     placeholder={keyPlaceholder}
@@ -403,7 +417,7 @@ export function AiProvidersCard({
                   )}
                 </div>
                 <ModelField
-                  label="Default model"
+                  label={t('settings.providers.defaultModel')}
                   catalog={catalogFor(provider)}
                   value={provider.model}
                   onChange={model => update(index, { model })}
@@ -413,7 +427,7 @@ export function AiProvidersCard({
 
               {spec?.needs_base_url && !kind.base_url && (
                 <div className="flex flex-col gap-1.5">
-                  <Label>Base URL</Label>
+                  <Label>{t('settings.providers.baseUrl')}</Label>
                   <Input
                     type="url"
                     placeholder="https://api.groq.com/openai/v1"
@@ -424,8 +438,7 @@ export function AiProvidersCard({
                     onChange={e => update(index, { base_url: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Where this endpoint lives. A local server (Ollama, LM Studio,
-                    vLLM) needs no API key.
+                    {t('settings.providers.baseUrlHint')}
                   </p>
                 </div>
               )}
@@ -438,7 +451,7 @@ export function AiProvidersCard({
                   onClick={() => onChange(rows.filter((_, i) => i !== index))}
                 >
                   <Trash2Icon />
-                  Remove
+                  {t('settings.providers.remove')}
                 </Button>
               </div>
             </div>
@@ -448,7 +461,7 @@ export function AiProvidersCard({
         <div>
           <Button type="button" variant="secondary" onClick={add}>
             <PlusIcon />
-            Add provider
+            {t('settings.providers.add')}
           </Button>
         </div>
       </CardContent>

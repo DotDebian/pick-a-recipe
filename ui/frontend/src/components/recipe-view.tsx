@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { textDirection } from '@/lib/kitchen-format'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -9,15 +10,18 @@ import type {
   HowToSection,
 } from '@/types'
 
-function parseDuration(iso: string | null | undefined): string {
+function parseDuration(
+  iso: string | null | undefined,
+  t: (key: string) => string,
+): string {
   if (!iso) return ''
   const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
   if (!m) return iso
   const h = parseInt(m[1] ?? '0')
   const min = parseInt(m[2] ?? '0')
   const parts: string[] = []
-  if (h) parts.push(`${h} hr`)
-  if (min) parts.push(`${min} min`)
+  if (h) parts.push(`${h} ${t('pages.recipeView.hr')}`)
+  if (min) parts.push(`${min} ${t('pages.recipeView.min')}`)
   return parts.join(' ') || iso
 }
 
@@ -96,9 +100,10 @@ interface RecipeViewProps {
 }
 
 export function RecipeView({ recipe }: RecipeViewProps) {
-  const prepTime = parseDuration(recipe.prepTime)
-  const cookTime = parseDuration(recipe.cookTime)
-  const totalTime = parseDuration(recipe.totalTime)
+  const { t } = useTranslation()
+  const prepTime = parseDuration(recipe.prepTime, t)
+  const cookTime = parseDuration(recipe.cookTime, t)
+  const totalTime = parseDuration(recipe.totalTime, t)
 
   const structuredIngredients = recipe.recipeIngredients ?? []
   const flatIngredients = recipe.recipeIngredient ?? []
@@ -120,13 +125,13 @@ export function RecipeView({ recipe }: RecipeViewProps) {
   const nutrition = recipe.nutrition
   const nutritionChips: { label: string; value: string }[] = []
   if (nutrition) {
-    if (nutrition.calories) nutritionChips.push({ label: 'Calories', value: nutrition.calories })
-    if (nutrition.proteinContent) nutritionChips.push({ label: 'Protein', value: nutrition.proteinContent })
-    if (nutrition.fatContent) nutritionChips.push({ label: 'Fat', value: nutrition.fatContent })
-    if (nutrition.carbohydrateContent) nutritionChips.push({ label: 'Carbs', value: nutrition.carbohydrateContent })
-    if (nutrition.fiberContent) nutritionChips.push({ label: 'Fiber', value: nutrition.fiberContent })
-    if (nutrition.sugarContent) nutritionChips.push({ label: 'Sugar', value: nutrition.sugarContent })
-    if (nutrition.sodiumContent) nutritionChips.push({ label: 'Sodium', value: nutrition.sodiumContent })
+    if (nutrition.calories) nutritionChips.push({ label: t('pages.recipeView.calories'), value: nutrition.calories })
+    if (nutrition.proteinContent) nutritionChips.push({ label: t('pages.recipeView.protein'), value: nutrition.proteinContent })
+    if (nutrition.fatContent) nutritionChips.push({ label: t('pages.recipeView.fat'), value: nutrition.fatContent })
+    if (nutrition.carbohydrateContent) nutritionChips.push({ label: t('pages.recipeView.carbs'), value: nutrition.carbohydrateContent })
+    if (nutrition.fiberContent) nutritionChips.push({ label: t('pages.recipeView.fiber'), value: nutrition.fiberContent })
+    if (nutrition.sugarContent) nutritionChips.push({ label: t('pages.recipeView.sugar'), value: nutrition.sugarContent })
+    if (nutrition.sodiumContent) nutritionChips.push({ label: t('pages.recipeView.sodium'), value: nutrition.sodiumContent })
   }
 
   return (
@@ -143,25 +148,25 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             {recipe.recipeYield && (
               <span>
-                <span className="font-medium text-foreground">Yield</span>{' '}
+                <span className="font-medium text-foreground">{t('pages.recipeView.yield')}</span>{' '}
                 {recipe.recipeYield}
               </span>
             )}
             {prepTime && (
               <span>
-                <span className="font-medium text-foreground">Prep</span>{' '}
+                <span className="font-medium text-foreground">{t('pages.recipeView.prep')}</span>{' '}
                 {prepTime}
               </span>
             )}
             {cookTime && (
               <span>
-                <span className="font-medium text-foreground">Cook</span>{' '}
+                <span className="font-medium text-foreground">{t('pages.recipeView.cook')}</span>{' '}
                 {cookTime}
               </span>
             )}
             {totalTime && (
               <span>
-                <span className="font-medium text-foreground">Total</span>{' '}
+                <span className="font-medium text-foreground">{t('pages.recipeView.total')}</span>{' '}
                 {totalTime}
               </span>
             )}
@@ -186,7 +191,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
 
         {(hasStructured || flatIngredients.length > 0) && (
           <div>
-            <h3 className="mb-2 text-sm font-semibold">Ingredients</h3>
+            <h3 className="mb-2 text-sm font-semibold">{t('pages.recipeView.ingredients')}</h3>
             {hasStructured ? (
               <div className="grid grid-cols-1 gap-1 sm:grid-cols-2" dir={contentDir}>
                 {structuredIngredients.map((ing, i) => (
@@ -215,7 +220,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           <>
             <Separator />
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Instructions</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('pages.recipeView.instructions')}</h3>
               <StepList instructions={recipe.recipeInstructions} dir={contentDir} />
             </div>
           </>
@@ -225,14 +230,14 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           <>
             <Separator />
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Nutrition</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('pages.recipeView.nutrition')}</h3>
               <div className="flex flex-wrap gap-2">
                 {nutritionChips.map(({ label, value }) => (
                   <div
                     key={label}
                     className="rounded-lg bg-muted px-2 py-1 text-xs"
                   >
-                    <span className="text-muted-foreground">{label}: </span>
+                    <span className="text-muted-foreground">{t('pages.recipeView.nutrient', { label })}</span>
                     <span className="font-medium">{value}</span>
                   </div>
                 ))}

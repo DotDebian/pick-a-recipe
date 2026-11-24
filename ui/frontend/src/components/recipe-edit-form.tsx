@@ -1,4 +1,6 @@
 import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,17 +59,17 @@ function ingredientsFrom(recipe: RecipeData): StructuredIngredient[] {
   return [emptyIngredient()]
 }
 
-function nutritionChips(recipe: RecipeData): { label: string; value: string }[] {
+function nutritionChips(recipe: RecipeData, t: TFunction): { label: string; value: string }[] {
   const nutrition = recipe.nutrition
   if (!nutrition) return []
   const chips: { label: string; value: string }[] = []
-  if (nutrition.calories) chips.push({ label: 'Calories', value: nutrition.calories })
-  if (nutrition.proteinContent) chips.push({ label: 'Protein', value: nutrition.proteinContent })
-  if (nutrition.fatContent) chips.push({ label: 'Fat', value: nutrition.fatContent })
-  if (nutrition.carbohydrateContent) chips.push({ label: 'Carbs', value: nutrition.carbohydrateContent })
-  if (nutrition.fiberContent) chips.push({ label: 'Fiber', value: nutrition.fiberContent })
-  if (nutrition.sugarContent) chips.push({ label: 'Sugar', value: nutrition.sugarContent })
-  if (nutrition.sodiumContent) chips.push({ label: 'Sodium', value: nutrition.sodiumContent })
+  if (nutrition.calories) chips.push({ label: t('settings.editForm.calories'), value: nutrition.calories })
+  if (nutrition.proteinContent) chips.push({ label: t('settings.editForm.protein'), value: nutrition.proteinContent })
+  if (nutrition.fatContent) chips.push({ label: t('settings.editForm.fat'), value: nutrition.fatContent })
+  if (nutrition.carbohydrateContent) chips.push({ label: t('settings.editForm.carbs'), value: nutrition.carbohydrateContent })
+  if (nutrition.fiberContent) chips.push({ label: t('settings.editForm.fiber'), value: nutrition.fiberContent })
+  if (nutrition.sugarContent) chips.push({ label: t('settings.editForm.sugar'), value: nutrition.sugarContent })
+  if (nutrition.sodiumContent) chips.push({ label: t('settings.editForm.sodium'), value: nutrition.sodiumContent })
   return chips
 }
 
@@ -105,12 +107,13 @@ interface RecipeEditFormProps {
 }
 
 export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
+  const { t } = useTranslation()
   const name = recipe.name ?? ''
   const description = recipe.description ?? ''
   const recipeYield = recipe.recipeYield ?? ''
   const ingredients = ingredientsFrom(recipe)
   const steps = instructionLines(recipe.recipeInstructions)
-  const chips = nutritionChips(recipe)
+  const chips = nutritionChips(recipe, t)
 
   const push = (
     nextName: string,
@@ -127,7 +130,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
   return (
     <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="recipe-name">Name</Label>
+          <Label htmlFor="recipe-name">{t('settings.editForm.name')}</Label>
           <Input
             id="recipe-name"
             dir="auto"
@@ -139,7 +142,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recipe-description">Description</Label>
+          <Label htmlFor="recipe-description">{t('settings.editForm.description')}</Label>
           <Textarea
             id="recipe-description"
             dir="auto"
@@ -152,7 +155,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recipe-yield">Yield</Label>
+          <Label htmlFor="recipe-yield">{t('settings.editForm.yield')}</Label>
           <Input
             id="recipe-yield"
             dir="auto"
@@ -167,7 +170,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Ingredients</h3>
+            <h3 className="text-sm font-semibold">{t('settings.editForm.ingredients')}</h3>
             <Button
               type="button"
               variant="outline"
@@ -177,7 +180,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
               }
             >
               <PlusIcon />
-              Add
+              {t('settings.editForm.add')}
             </Button>
           </div>
           <div className="space-y-2">
@@ -185,7 +188,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
               <div key={i} className="grid grid-cols-12 gap-1.5">
                 <Input
                   className="col-span-3"
-                  placeholder="Qty"
+                  placeholder={t('settings.editForm.qty')}
                   value={ing.quantity}
                   onChange={(e) => {
                     const next = ingredients.map((row, idx) =>
@@ -196,7 +199,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
                 />
                 <Input
                   className="col-span-2"
-                  placeholder="Unit"
+                  placeholder={t('settings.editForm.unit')}
                   dir="auto"
                   value={ing.unit}
                   onChange={(e) => {
@@ -208,7 +211,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
                 />
                 <Input
                   className="col-span-4"
-                  placeholder="Food"
+                  placeholder={t('settings.editForm.food')}
                   dir="auto"
                   value={ing.food}
                   onChange={(e) => {
@@ -220,7 +223,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
                 />
                 <Input
                   className="col-span-2"
-                  placeholder="Notes"
+                  placeholder={t('settings.editForm.notes')}
                   dir="auto"
                   value={ing.notes}
                   onChange={(e) => {
@@ -245,10 +248,10 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
                       steps,
                     )
                   }}
-                  title="Remove ingredient"
+                  title={t('settings.editForm.removeIngredient')}
                 >
                   <Trash2Icon />
-                  <span className="sr-only">Remove ingredient</span>
+                  <span className="sr-only">{t('settings.editForm.removeIngredient')}</span>
                 </Button>
               </div>
             ))}
@@ -259,7 +262,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Steps</h3>
+            <h3 className="text-sm font-semibold">{t('settings.editForm.steps')}</h3>
             <Button
               type="button"
               variant="outline"
@@ -269,7 +272,7 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
               }
             >
               <PlusIcon />
-              Add
+              {t('settings.editForm.add')}
             </Button>
           </div>
           <ol className="space-y-2">
@@ -305,10 +308,10 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
                       next.length > 0 ? next : [''],
                     )
                   }}
-                  title="Remove step"
+                  title={t('settings.editForm.removeStep')}
                 >
                   <Trash2Icon />
-                  <span className="sr-only">Remove step</span>
+                  <span className="sr-only">{t('settings.editForm.removeStep')}</span>
                 </Button>
               </li>
             ))}
@@ -319,9 +322,9 @@ export function RecipeEditForm({ recipe, onChange }: RecipeEditFormProps) {
           <>
             <Separator />
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Nutrition</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('settings.editForm.nutrition')}</h3>
               <p className="mb-2 text-xs text-muted-foreground">
-                Recalculated from ingredients after you confirm.
+                {t('settings.editForm.recalculated')}
               </p>
               <div className="flex flex-wrap gap-2">
                 {chips.map(({ label, value }) => (

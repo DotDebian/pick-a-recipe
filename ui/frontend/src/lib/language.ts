@@ -1,8 +1,12 @@
-export type Language = 'he' | 'en'
+export type Language = 'fr' | 'he' | 'en'
 
-/** A saved choice wins; otherwise Hebrew only when the browser prefers it, English for everyone else. */
+const SUPPORTED: readonly Language[] = ['fr', 'he', 'en']
+
+/** A saved choice wins; otherwise the browser's first language when supported, English for everyone else. */
 export function pickLanguage(stored: string | null, browserLanguages: readonly string[]): Language {
-  if (stored === 'he' || stored === 'en') return stored
+  if (stored && (SUPPORTED as readonly string[]).includes(stored)) return stored as Language
   const preferred = (browserLanguages[0] ?? '').toLowerCase()
-  return preferred.startsWith('he') || preferred.startsWith('iw') ? 'he' : 'en'
+  if (preferred.startsWith('he') || preferred.startsWith('iw')) return 'he'
+  if (preferred.startsWith('fr')) return 'fr'
+  return 'en'
 }

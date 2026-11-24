@@ -25,6 +25,7 @@ const en = {
     admin: 'admin',
   },
   languages: {
+    fr: 'French',
     he: 'Hebrew',
     en: 'English',
   },

@@ -25,6 +25,7 @@ const he = {
     admin: 'מנהל',
   },
   languages: {
+    fr: 'צרפתית',
     he: 'עברית',
     en: 'English',
   },

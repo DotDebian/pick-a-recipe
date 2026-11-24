@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Trans, useTranslation } from 'react-i18next'
 import { ChefHat, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { api, ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input'
  * rather than a second admin.
  */
 export function SetupPage() {
+  const { t } = useTranslation()
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ['setupInfo'],
     queryFn: api.setupInfo,
@@ -54,7 +56,7 @@ export function SetupPage() {
         window.location.href = '/login'
         return
       }
-      setError(err instanceof Error ? err.message : 'Could not create the account.')
+      setError(err instanceof Error ? err.message : t('pages.setup.createFailed'))
       setSubmitting(false)
     }
   }
@@ -68,10 +70,10 @@ export function SetupPage() {
           </div>
           <div className="text-center">
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Welcome
+              {t('pages.setup.welcome')}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Create the administrator account for this instance
+              {t('pages.setup.subtitle')}
             </p>
           </div>
         </div>
@@ -101,7 +103,7 @@ export function SetupPage() {
                     htmlFor="username"
                     className="text-sm font-medium text-foreground"
                   >
-                    Username
+                    {t('pages.setup.username')}
                   </label>
                   <Input
                     id="username"
@@ -116,12 +118,11 @@ export function SetupPage() {
                   />
                   {data?.adopting && (
                     <p className="text-xs text-muted-foreground">
-                      This instance already has recipes saved under{' '}
-                      <span className="font-medium text-foreground">
-                        {data.adopting}
-                      </span>
-                      . Keep that name to carry them over; a different one starts
-                      with an empty history.
+                      <Trans
+                        i18nKey="pages.setup.adopting"
+                        values={{ name: data.adopting }}
+                        components={{ b: <span className="font-medium text-foreground" /> }}
+                      />
                     </p>
                   )}
                 </div>
@@ -131,7 +132,7 @@ export function SetupPage() {
                     htmlFor="password"
                     className="text-sm font-medium text-foreground"
                   >
-                    Password
+                    {t('pages.setup.password')}
                   </label>
                   <Input
                     id="password"
@@ -144,8 +145,7 @@ export function SetupPage() {
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    At least 10 characters. Length matters more than symbols, so a
-                    memorable phrase works well.
+                    {t('pages.setup.passwordHint')}
                   </p>
                 </div>
 
@@ -154,7 +154,7 @@ export function SetupPage() {
                     htmlFor="confirm_password"
                     className="text-sm font-medium text-foreground"
                   >
-                    Confirm password
+                    {t('pages.setup.confirmPassword')}
                   </label>
                   <Input
                     id="confirm_password"
@@ -175,7 +175,7 @@ export function SetupPage() {
                   disabled={submitting}
                 >
                   <ShieldCheck />
-                  {submitting ? 'Creating account…' : 'Create account'}
+                  {submitting ? t('pages.setup.creating') : t('pages.setup.create')}
                 </Button>
               </form>
             )}
@@ -183,8 +183,7 @@ export function SetupPage() {
         </Card>
 
         <p className="max-w-sm text-center text-xs text-muted-foreground">
-          This page closes as soon as an account exists. If you did not open it
-          yourself, create the account now to stop someone else claiming it.
+          {t('pages.setup.closing')}
         </p>
       </div>
     </div>

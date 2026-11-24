@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 
 import { api } from '@/lib/api'
 import { pickUnseenPreview } from '@/lib/preview-queue'
@@ -30,6 +31,7 @@ interface PreviewState {
  * so a recipe that finished while you were on Tasks or a job never appeared.
  */
 export function RecipePreviewHost() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const shown = useRef<Set<string>>(new Set())
@@ -51,9 +53,11 @@ export function RecipePreviewHost() {
       recipe: structuredClone(upload.recipe),
     })
     toast.info(
-      `Recipe "${upload.recipe.name || 'Untitled'}" is waiting for your confirmation!`,
+      t('tasks.preview.waiting', {
+        name: upload.recipe.name || t('tasks.preview.untitled'),
+      }),
     )
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (preview) return
@@ -101,7 +105,7 @@ export function RecipePreviewHost() {
       setPreview(null)
       void queryClient.invalidateQueries({ queryKey: ['pending-uploads'] })
       void queryClient.invalidateQueries({ queryKey: ['jobs'] })
-      toast.success('Upload confirmed!')
+      toast.success(t('tasks.preview.confirmed'))
     },
     onError: (err: Error) => {
       toast.error(err.message)
@@ -114,7 +118,7 @@ export function RecipePreviewHost() {
       setPreview(null)
       void queryClient.invalidateQueries({ queryKey: ['pending-uploads'] })
       void queryClient.invalidateQueries({ queryKey: ['jobs'] })
-      toast.info('Upload cancelled')
+      toast.info(t('tasks.preview.cancelled'))
     },
     onError: (err: Error) => {
       toast.error(err.message)
@@ -130,10 +134,10 @@ export function RecipePreviewHost() {
     >
       <DialogContent className="flex max-h-[calc(100svh-1rem)] flex-col gap-4 overflow-y-auto overscroll-contain sm:max-w-2xl">
         <DialogHeader className="shrink-0 pr-8">
-          <DialogTitle>Recipe Preview</DialogTitle>
+          <DialogTitle>{t('tasks.preview.title')}</DialogTitle>
           {preview && (
             <DialogDescription>
-              Review before uploading to{' '}
+              {t('tasks.preview.reviewBefore')}{' '}
               <span className="font-medium text-foreground">
                 {preview.pendingUpload.output_target}
               </span>
@@ -171,7 +175,7 @@ export function RecipePreviewHost() {
             }}
             disabled={cancelUpload.isPending}
           >
-            Cancel
+            {t('tasks.preview.cancel')}
           </Button>
           <Button
             onClick={() => {
@@ -179,7 +183,7 @@ export function RecipePreviewHost() {
             }}
             disabled={confirmUpload.isPending}
           >
-            Confirm Upload
+            {t('tasks.preview.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

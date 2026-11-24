@@ -1,4 +1,6 @@
 import { Link } from 'react-router'
+import { Trans, useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
   InfoIcon,
   DownloadIcon,
@@ -29,16 +31,6 @@ const STAGE_ICONS: Record<string, React.ReactNode> = {
   upload: <CloudUploadIcon className="size-3.5" />,
 }
 
-const STAGE_LABELS: Record<string, string> = {
-  info: 'Info',
-  download: 'Download',
-  transcribe: 'Transcribe',
-  visual: 'Visual',
-  image: 'Image',
-  evaluate: 'Evaluate',
-  upload: 'Upload',
-}
-
 function statusBadgeVariant(
   status: JobStatus,
 ): React.ComponentProps<typeof Badge>['variant'] {
@@ -58,17 +50,8 @@ function statusBadgeVariant(
   }
 }
 
-function statusLabel(status: JobStatus): string {
-  switch (status) {
-    case 'queued': return 'Queued'
-    case 'running': return 'Running'
-    case 'awaiting_approval': return 'Awaiting Approval'
-    case 'uploading': return 'Uploading'
-    case 'completed': return 'Completed'
-    case 'failed': return 'Failed'
-    case 'cancelled': return 'Cancelled'
-    case 'expired': return 'Expired'
-  }
+function statusLabel(status: JobStatus, t: TFunction): string {
+  return t(`tasks.jobCard.status.${status}`)
 }
 
 function isCancellable(status: JobStatus): boolean {
@@ -92,6 +75,7 @@ interface StageTrackerProps {
 }
 
 function StageTracker({ currentStage, status }: StageTrackerProps) {
+  const { t } = useTranslation()
   const displayStage = resolvedDisplayStage(currentStage)
   const currentIndex = PIPELINE_STAGES.indexOf(displayStage as PipelineStage)
 
@@ -107,7 +91,7 @@ function StageTracker({ currentStage, status }: StageTrackerProps) {
         return (
           <div
             key={stage}
-            title={STAGE_LABELS[stage]}
+            title={t(`tasks.jobCard.stage.${stage}`)}
             className={cn(
               'flex size-6 items-center justify-center rounded-full transition-colors',
               isError
@@ -135,14 +119,15 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onCancel, onRetry, href }: JobCardProps) {
+  const { t } = useTranslation()
   const title = job.video_title ?? truncateUrl(job.url)
   const cancellable = isCancellable(job.status)
 
   const messageText = (() => {
     if (job.status === 'queued' && job.queue_position) {
-      return `Queued — position ${job.queue_position}`
+      return t('tasks.jobCard.queuedPosition', { position: job.queue_position })
     }
-    return job.stage_message ?? statusLabel(job.status)
+    return job.stage_message ?? statusLabel(job.status, t)
   })()
 
   return (
@@ -176,17 +161,17 @@ export function JobCard({ job, onCancel, onRetry, href }: JobCardProps) {
                 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
             )}
           >
-            {statusLabel(job.status)}
+            {statusLabel(job.status, t)}
           </Badge>
           {cancellable && onCancel && (
             <Button
               variant="destructive"
               size="icon-sm"
               onClick={() => onCancel(job.id)}
-              title="Cancel job"
+              title={t('tasks.cancelJob')}
             >
               <XIcon />
-              <span className="sr-only">Cancel</span>
+              <span className="sr-only">{t('tasks.cancel')}</span>
             </Button>
           )}
         </CardAction>
@@ -219,12 +204,14 @@ export function JobCard({ job, onCancel, onRetry, href }: JobCardProps) {
                 onClick={() => onRetry(job)}
               >
                 <RotateCcwIcon />
-                Retry
+                {t('tasks.retry')}
               </Button>
             )}
             <p className="text-xs text-muted-foreground">
-              To report this, set <span className="font-mono">LOG_LEVEL=debug</span>, restart,
-              repeat it, and paste the container log into a bug report.
+              <Trans
+                i18nKey="tasks.reportHint"
+                components={{ mono: <span className="font-mono" /> }}
+              />
             </p>
           </div>
         )}

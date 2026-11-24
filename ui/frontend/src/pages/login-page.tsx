@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { ChefHat, Download, TriangleAlert } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -50,6 +51,7 @@ function useInstallPrompt() {
 }
 
 function PasswordForm() {
+  const { t } = useTranslation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +67,7 @@ function PasswordForm() {
       // new, and every cached query was populated while signed out.
       window.location.href = '/'
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed.')
+      setError(err instanceof Error ? err.message : t('pages.login.signInFailed'))
       setSubmitting(false)
     }
   }
@@ -83,7 +85,7 @@ function PasswordForm() {
       )}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="username" className="text-sm font-medium text-foreground">
-          Username
+          {t('pages.login.username')}
         </label>
         <Input
           id="username"
@@ -99,7 +101,7 @@ function PasswordForm() {
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="password" className="text-sm font-medium text-foreground">
-          Password
+          {t('pages.login.password')}
         </label>
         <Input
           id="password"
@@ -112,13 +114,14 @@ function PasswordForm() {
         />
       </div>
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>
-        {submitting ? 'Signing in…' : 'Sign in'}
+        {submitting ? t('pages.login.signingIn') : t('pages.login.signIn')}
       </Button>
     </form>
   )
 }
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['authStatus'],
     queryFn: api.authStatus,
@@ -148,7 +151,7 @@ export function LoginPage() {
               Pick a Recipe
             </h1>
             <p className="text-sm text-muted-foreground">
-              Extract recipes from social media videos
+              {t('pages.login.tagline')}
             </p>
           </div>
         </div>
@@ -161,7 +164,7 @@ export function LoginPage() {
               <PasswordForm />
             ) : ssoEnabled ? (
               <Button asChild size="lg" className="w-full">
-                <a href="/auth/login">Sign in with {ssoProviderName}</a>
+                <a href="/auth/login">{t('pages.login.signInWith', { provider: ssoProviderName })}</a>
               </Button>
             ) : (
               <div
@@ -170,23 +173,10 @@ export function LoginPage() {
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  Single sign-on is not configured on this server. Set{' '}
-                  <code className="rounded bg-destructive/15 px-1 font-mono text-xs">
-                    OIDC_ISSUER_URL
-                  </code>
-                  ,{' '}
-                  <code className="rounded bg-destructive/15 px-1 font-mono text-xs">
-                    OIDC_CLIENT_ID
-                  </code>{' '}
-                  and{' '}
-                  <code className="rounded bg-destructive/15 px-1 font-mono text-xs">
-                    OIDC_CLIENT_SECRET
-                  </code>
-                  , or drop{' '}
-                  <code className="rounded bg-destructive/15 px-1 font-mono text-xs">
-                    AUTH_MODE
-                  </code>{' '}
-                  to use local accounts instead.
+                  <Trans
+                    i18nKey="pages.login.ssoNotConfigured"
+                    components={{ c: <code className="rounded bg-destructive/15 px-1 font-mono text-xs" /> }}
+                  />
                 </span>
               </div>
             )}
@@ -199,7 +189,7 @@ export function LoginPage() {
                 onClick={() => void install()}
               >
                 <Download />
-                Install App
+                {t('pages.login.installApp')}
               </Button>
             )}
           </CardContent>

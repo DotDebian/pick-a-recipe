@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { BellIcon } from 'lucide-react'
 
 import {
@@ -28,6 +29,7 @@ import { Switch } from '@/components/ui/switch'
  * make this device claim it is subscribed.
  */
 export function NotificationsCard() {
+  const { t } = useTranslation()
   const supported = isPushSupported()
 
   const [subscribed, setSubscribed] = useState(false)
@@ -54,14 +56,14 @@ export function NotificationsCard() {
     try {
       if (next) {
         await enablePush()
-        toast.success('Notifications on for this browser')
+        toast.success(t('settings.notifications.on'))
       } else {
         await disablePush()
-        toast.success('Notifications off for this browser')
+        toast.success(t('settings.notifications.off'))
       }
       await refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not change notifications')
+      toast.error(err instanceof Error ? err.message : t('settings.notifications.failed'))
       // Re-read rather than assuming the toggle failed cleanly: permission may
       // have been granted even though registering the endpoint did not finish.
       await refresh()
@@ -77,17 +79,16 @@ export function NotificationsCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BellIcon className="size-4" />
-          Notifications
+          {t('settings.notifications.title')}
         </CardTitle>
         <CardDescription>
-          Get told when a recipe finishes, fails, or is waiting for your approval —
-          even with the app closed. Approvals expire, so this is the one worth having.
+          {t('settings.notifications.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4 max-w-md">
           <Label htmlFor="push-toggle" className="font-normal">
-            Notify this browser
+            {t('settings.notifications.toggle')}
           </Label>
           <Switch
             id="push-toggle"
@@ -99,21 +100,19 @@ export function NotificationsCard() {
 
         {!supported && (
           <p className="text-xs text-muted-foreground">
-            This browser does not support web notifications. On iOS, add the app to your
-            Home Screen first.
+            {t('settings.notifications.unsupported')}
           </p>
         )}
 
         {supported && blocked && (
           <p className="text-xs text-destructive">
-            Notifications are blocked for this site. Re-allow them in your browser’s site
-            settings, then reload.
+            {t('settings.notifications.blocked')}
           </p>
         )}
 
         {supported && !blocked && (
           <p className="text-xs text-muted-foreground">
-            Applies to this browser only — turn it on wherever you want to be notified.
+            {t('settings.notifications.perBrowser')}
           </p>
         )}
       </CardContent>

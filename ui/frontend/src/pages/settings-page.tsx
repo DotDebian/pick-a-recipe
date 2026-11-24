@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   LanguagesIcon,
   SendIcon,
@@ -79,6 +80,7 @@ function Field({ label, hint, children }: { label: string; hint?: React.ReactNod
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: session, isLoading: sessionLoading } = useSession()
   const isAdmin = session?.is_admin ?? false
@@ -116,7 +118,7 @@ export function SettingsPage() {
     setSaving(true)
     try {
       await api.saveConfig(draft)
-      toast.success('Settings saved')
+      toast.success(t('settings.page.saved'))
       if (providers) {
         queryClient.setQueryData(
           ['aiProviders'],
@@ -128,7 +130,7 @@ export function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ['config'] })
       await queryClient.invalidateQueries({ queryKey: ['aiProviders'] })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save settings')
+      toast.error(err instanceof Error ? err.message : t('settings.page.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -144,7 +146,7 @@ export function SettingsPage() {
       toast.success(result.message)
       await queryClient.invalidateQueries({ queryKey: ['config'] })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload cookies file')
+      toast.error(err instanceof Error ? err.message : t('settings.page.cookiesUploadFailed'))
     } finally {
       setCookiesUploading(false)
     }
@@ -156,7 +158,7 @@ export function SettingsPage() {
       toast.success(result.message)
       await queryClient.invalidateQueries({ queryKey: ['config'] })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete cookies')
+      toast.error(err instanceof Error ? err.message : t('settings.page.cookiesDeleteFailed'))
     }
   }
 
@@ -174,7 +176,7 @@ export function SettingsPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export settings')
+      toast.error(err instanceof Error ? err.message : t('settings.page.exportFailed'))
     }
   }
 
@@ -186,11 +188,11 @@ export function SettingsPage() {
       const text = await file.text()
       const parsed: unknown = JSON.parse(text)
       await api.importSettings(parsed)
-      toast.success('Settings imported successfully')
+      toast.success(t('settings.page.imported'))
       reset()
       await queryClient.invalidateQueries({ queryKey: ['config'] })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to import settings')
+      toast.error(err instanceof Error ? err.message : t('settings.page.importFailed'))
     }
   }
 
@@ -207,7 +209,7 @@ export function SettingsPage() {
 
   if (sessionLoading || (isAdmin && configLoading)) {
     return (
-      <div className="p-6 text-muted-foreground text-sm">Loading settings…</div>
+      <div className="p-6 text-muted-foreground text-sm">{t('settings.page.loading')}</div>
     )
   }
 
@@ -217,9 +219,9 @@ export function SettingsPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-6 flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-semibold">Settings</h1>
+          <h1 className="text-xl font-semibold">{t('settings.page.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Extraction settings are managed by an administrator.
+            {t('settings.page.nonAdminNote')}
           </p>
         </div>
         <NotificationsCard />
@@ -231,8 +233,8 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 pb-24 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Configure your Pick-a-Recipe application</p>
+        <h1 className="text-xl font-semibold">{t('settings.page.title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t('settings.page.subtitle')}</p>
       </div>
 
       <AiProvidersCard providers={providers} onChange={setProviders} />
@@ -244,11 +246,10 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UtensilsIcon className="size-4" />
-            Nutrition lookup
+            {t('settings.nutrition.title')}
           </CardTitle>
           <CardDescription>
-            Ingredients are costed from a built-in table first. Anything it does not
-            recognise can be looked up live in Open Food Facts.
+            {t('settings.nutrition.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -262,21 +263,22 @@ export function SettingsPage() {
             />
             <div>
               <Label htmlFor="nutrition_lookup_enabled">
-                Look unknown ingredients up in Open Food Facts
+                {t('settings.nutrition.toggle')}
               </Label>
               <p className="text-xs text-muted-foreground">
-                An{' '}
-                <a
-                  href="https://world.openfoodfacts.org/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-2 hover:text-foreground"
-                >
-                  open food database
-                </a>{' '}
-                with worldwide coverage. No API key or account needed. Turn this
-                off for a fully offline instance; the built-in table keeps
-                working either way.
+                <Trans
+                  i18nKey="settings.nutrition.toggleHint"
+                  components={{
+                    a: (
+                      <a
+                        href="https://world.openfoodfacts.org/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2 hover:text-foreground"
+                      />
+                    ),
+                  }}
+                />
               </p>
             </div>
           </div>
@@ -288,32 +290,33 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <LanguagesIcon className="size-4" />
-            Recipe Language
+            {t('settings.language.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field
-            label="Recipe Language"
-            hint="Language the final recipe is written in. Leave empty to keep each recipe in its own language."
+            label={t('settings.language.title')}
+            hint={t('settings.language.hint')}
           >
             <Input
               type="text"
-              placeholder="Original language"
+              placeholder={t('settings.language.placeholder')}
               value={get('recipe_lang')}
               onChange={e => set('recipe_lang', e.target.value)}
             />
           </Field>
           <Field
-            label="Transcription Code"
+            label={t('settings.language.codeLabel')}
             hint={
-              <>
-                Two-letter code to translate recipes into (e.g. <code className="font-mono text-xs">he</code>, <code className="font-mono text-xs">en</code>). Leave empty to keep the original language and detect speech automatically.
-              </>
+              <Trans
+                i18nKey="settings.language.codeHint"
+                components={{ c: <code className="font-mono text-xs" /> }}
+              />
             }
           >
             <Input
               type="text"
-              placeholder="auto"
+              placeholder={t('settings.language.codePlaceholder')}
               value={get('target_language')}
               onChange={e => set('target_language', e.target.value)}
             />
@@ -326,24 +329,24 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <SendIcon className="size-4" />
-            Recipe Export
+            {t('settings.export.title')}
           </CardTitle>
           <CardDescription>
-            Where finished recipes get saved. Each enabled destination receives every recipe.
+            {t('settings.export.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
             <div>
-              <p className="text-sm font-medium">The Chef library (built in)</p>
+              <p className="text-sm font-medium">{t('settings.export.libraryTitle')}</p>
               <p className="text-xs text-muted-foreground">
-                Save every extracted recipe to this app&apos;s own library, planner and shopping list.
+                {t('settings.export.libraryDescription')}
               </p>
             </div>
             <Switch
               checked={libraryEnabled}
               onCheckedChange={checked => set('library_enabled', checked ? 'true' : 'false')}
-              aria-label="Enable the built-in library"
+              aria-label={t('settings.export.libraryAria')}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -357,15 +360,15 @@ export function SettingsPage() {
                     onCheckedChange={checked =>
                       set('mealie_enabled', checked ? 'true' : 'false')
                     }
-                    aria-label="Enable Mealie export"
+                    aria-label={t('settings.export.mealieAria')}
                   />
                 </div>
                 <CardDescription className="text-xs">
-                  {mealieEnabled ? 'Enabled' : 'Disabled'}
+                  {mealieEnabled ? t('settings.export.enabled') : t('settings.export.disabled')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                <Field label="Mealie URL">
+                <Field label={t('settings.export.mealieUrl')}>
                   <Input
                     type="url"
                     placeholder="http://localhost:9925"
@@ -374,10 +377,10 @@ export function SettingsPage() {
                     onChange={e => set('mealie_host', e.target.value)}
                   />
                 </Field>
-                <Field label="Mealie API Key">
+                <Field label={t('settings.export.mealieKey')}>
                   <Input
                     type="password"
-                    placeholder="Your Mealie API key"
+                    placeholder={t('settings.export.mealieKeyPlaceholder')}
                     autoComplete="off"
                     value={get('mealie_api_key')}
                     onChange={e => set('mealie_api_key', e.target.value)}
@@ -396,15 +399,15 @@ export function SettingsPage() {
                     onCheckedChange={checked =>
                       set('tandoor_enabled', checked ? 'true' : 'false')
                     }
-                    aria-label="Enable Tandoor export"
+                    aria-label={t('settings.export.tandoorAria')}
                   />
                 </div>
                 <CardDescription className="text-xs">
-                  {tandoorEnabled ? 'Enabled' : 'Disabled'}
+                  {tandoorEnabled ? t('settings.export.enabled') : t('settings.export.disabled')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                <Field label="Tandoor URL">
+                <Field label={t('settings.export.tandoorUrl')}>
                   <Input
                     type="url"
                     placeholder="https://tandoor.example.com"
@@ -413,10 +416,10 @@ export function SettingsPage() {
                     onChange={e => set('tandoor_host', e.target.value)}
                   />
                 </Field>
-                <Field label="Tandoor API Key">
+                <Field label={t('settings.export.tandoorKey')}>
                   <Input
                     type="password"
-                    placeholder="Your Tandoor API key"
+                    placeholder={t('settings.export.tandoorKeyPlaceholder')}
                     autoComplete="off"
                     value={get('tandoor_api_key')}
                     onChange={e => set('tandoor_api_key', e.target.value)}
@@ -428,7 +431,7 @@ export function SettingsPage() {
 
           {!libraryEnabled && !mealieEnabled && !tandoorEnabled && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
-              <strong>No recipe destination is enabled.</strong> Recipes will not be saved anywhere until you enable the library, Mealie or Tandoor.
+              <strong>{t('settings.export.noDestinationTitle')}</strong> {t('settings.export.noDestinationBody')}
             </div>
           )}
 
@@ -441,8 +444,8 @@ export function SettingsPage() {
               }
             />
             <div>
-              <Label htmlFor="confirm_before_upload">Ask me before uploading</Label>
-              <FieldHint>Show a preview of the recipe first, then upload once you confirm.</FieldHint>
+              <Label htmlFor="confirm_before_upload">{t('settings.export.confirmLabel')}</Label>
+              <FieldHint>{t('settings.export.confirmHint')}</FieldHint>
             </div>
           </div>
         </CardContent>
@@ -453,15 +456,15 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <VideoIcon className="size-4" />
-            Video Downloads (YouTube, Instagram, etc.)
+            {t('settings.video.title')}
           </CardTitle>
           <CardDescription>
-            Configure authentication when downloads fail. YouTube may show bot-check errors; Instagram may block anonymous requests.
+            {t('settings.video.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label>Upload Cookies File</Label>
+            <Label>{t('settings.video.uploadLabel')}</Label>
             <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
@@ -470,34 +473,34 @@ export function SettingsPage() {
                 onClick={() => cookiesFileRef.current?.click()}
               >
                 <UploadIcon />
-                {cookiesUploading ? 'Uploading…' : 'Choose cookies.txt file'}
+                {cookiesUploading ? t('settings.video.uploading') : t('settings.video.choose')}
               </Button>
               {hasCookiesFile && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm">
                       <Trash2Icon />
-                      Delete cookies
+                      {t('settings.video.delete')}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete cookies file?</AlertDialogTitle>
+                      <AlertDialogTitle>{t('settings.video.deleteTitle')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the uploaded cookies file. Downloads that required authentication may start failing.
+                        {t('settings.video.deleteBody')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{t('settings.video.cancel')}</AlertDialogCancel>
                       <AlertDialogAction variant="destructive" onClick={handleDeleteCookies}>
-                        Delete
+                        {t('settings.video.confirmDelete')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               )}
               <span className="text-sm text-muted-foreground">
-                {hasCookiesFile ? 'Cookies file configured' : 'No cookies file uploaded'}
+                {hasCookiesFile ? t('settings.video.configured') : t('settings.video.notConfigured')}
               </span>
             </div>
             <input
@@ -508,25 +511,29 @@ export function SettingsPage() {
               onChange={handleCookiesUpload}
             />
             <FieldHint>
-              Upload a Netscape-format cookies.txt file exported from your browser.{' '}
-              <a
-                href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                How to export cookies
-              </a>
+              <Trans
+                i18nKey="settings.video.hint"
+                components={{
+                  a: (
+                    <a
+                      href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2 hover:text-foreground"
+                    />
+                  ),
+                }}
+              />
             </FieldHint>
           </div>
 
           <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">How to get cookies:</p>
+            <p className="font-medium text-foreground mb-1">{t('settings.video.howTitle')}</p>
             <ol className="list-decimal list-inside space-y-0.5">
-              <li>Install a browser extension like "Get cookies.txt LOCALLY" or "cookies.txt"</li>
-              <li>Log into the video site in your browser (YouTube, Instagram, etc.)</li>
-              <li>Use the extension to export cookies for that site</li>
-              <li>Click "Choose cookies.txt file" above to upload the exported file</li>
+              <li>{t('settings.video.step1')}</li>
+              <li>{t('settings.video.step2')}</li>
+              <li>{t('settings.video.step3')}</li>
+              <li>{t('settings.video.step4')}</li>
             </ol>
           </div>
         </CardContent>
@@ -537,13 +544,13 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ListIcon className="size-4" />
-            Queue
+            {t('settings.queue.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Field
-            label="Max Concurrent Jobs"
-            hint="Override with the MAX_CONCURRENT_JOBS environment variable."
+            label={t('settings.queue.maxJobs')}
+            hint={t('settings.queue.maxJobsHint')}
           >
             <Input
               type="number"
@@ -574,12 +581,10 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UsersIcon className="size-4" />
-              Accounts
+              {t('settings.accounts.title')}
             </CardTitle>
             <CardDescription>
-              Sign-in, accounts and admin rights come from your identity
-              provider. Add or remove people there, and use its groups to
-              decide who administers this instance.
+              {t('settings.accounts.oidcBody')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -590,10 +595,10 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DatabaseBackupIcon className="size-4" />
-            Backup Settings
+            {t('settings.backup.title')}
           </CardTitle>
           <CardDescription>
-            Download your settings as a JSON file or restore them from a previous backup.
+            {t('settings.backup.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -601,16 +606,16 @@ export function SettingsPage() {
             <div className="flex flex-col gap-1.5">
               <Button variant="outline" onClick={handleExport}>
                 <DownloadIcon />
-                Export
+                {t('settings.backup.export')}
               </Button>
-              <FieldHint>Saves everything, including API keys, to a file on your device.</FieldHint>
+              <FieldHint>{t('settings.backup.exportHint')}</FieldHint>
             </div>
             <div className="flex flex-col gap-1.5">
               <Button variant="outline" onClick={() => importFileRef.current?.click()}>
                 <UploadIcon />
-                Import
+                {t('settings.backup.import')}
               </Button>
-              <FieldHint>Restore from a previously exported file.</FieldHint>
+              <FieldHint>{t('settings.backup.importHint')}</FieldHint>
               <input
                 ref={importFileRef}
                 type="file"
@@ -628,7 +633,7 @@ export function SettingsPage() {
         <div className="fixed bottom-0 left-0 right-0 z-40 flex justify-end border-t border-border bg-background/90 px-4 py-3 backdrop-blur-sm">
           <Button onClick={handleSave} disabled={saving}>
             <SaveIcon />
-            {saving ? 'Saving…' : 'Save Settings'}
+            {saving ? t('settings.page.saving') : t('settings.page.save')}
           </Button>
         </div>
       )}

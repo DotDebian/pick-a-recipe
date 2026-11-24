@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { AudioLinesIcon, ChefHatIcon, WorkflowIcon } from 'lucide-react'
 
 import type { AiProvider, AppConfig } from '@/types'
@@ -63,6 +64,7 @@ export function AiTasksCard({ providers, get, set }: {
   get: Get
   set: Set
 }) {
+  const { t } = useTranslation()
   const catalogFor = useCatalogFor()
   const named = providers.filter(p => p.name.trim())
   const byId = (id: string) => named.find(p => p.id === id)
@@ -83,25 +85,24 @@ export function AiTasksCard({ providers, get, set }: {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <WorkflowIcon className="size-4" />
-          AI Tasks
+          {t('settings.tasks.title')}
         </CardTitle>
         <CardDescription>
-          Which account and model does each job. Leave a model empty to use that
-          account&apos;s default model.
+          {t('settings.tasks.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {named.length === 0 && (
-          <p className="text-sm text-muted-foreground">Add an AI provider above first.</p>
+          <p className="text-sm text-muted-foreground">{t('settings.tasks.addProviderFirst')}</p>
         )}
 
         {extraction && (
           <Task
             icon={<ChefHatIcon className="size-4" />}
-            title="Recipes & Sous Chef"
-            description="Turns videos and pages into recipes, reads recipes from photos and links, and runs Sous Chef and its suggestions. Extraction reads on-screen text and picks the dish photo, so the model has to see images."
+            title={t('settings.tasks.recipesTitle')}
+            description={t('settings.tasks.recipesDescription')}
           >
-            <Field label="Provider">
+            <Field label={t('settings.tasks.provider')}>
               <Choice
                 value={extraction.id}
                 onChange={v => {
@@ -116,19 +117,21 @@ export function AiTasksCard({ providers, get, set }: {
               value={get('ai_extraction_model')}
               defaultModel={extraction.model}
               onChange={v => set('ai_extraction_model', v)}
-              placeholder={`Default: ${extraction.model || 'none set'}`}
+              placeholder={t('settings.tasks.defaultPlaceholder', {
+                model: extraction.model || t('settings.tasks.noneSet'),
+              })}
             />
           </Task>
         )}
 
         <Task
           icon={<AudioLinesIcon className="size-4" />}
-          title="Speech to text"
-          description="Turns the video's audio into text. Whisper runs on this server with no API; a provider is faster on a small machine. Off builds recipes from on-screen text only."
+          title={t('settings.tasks.speechTitle')}
+          description={t('settings.tasks.speechDescription')}
         >
           <Field
-            label="Transcribe with"
-            hint={transcriber ? 'If the provider fails, the job falls back to Whisper on this server.' : undefined}
+            label={t('settings.tasks.transcribeWith')}
+            hint={transcriber ? t('settings.tasks.fallbackHint') : undefined}
           >
             <Choice
               value={speechValue}
@@ -141,8 +144,8 @@ export function AiTasksCard({ providers, get, set }: {
                 set('transcription_provider', v.slice('provider:'.length))
               }}
               options={[
-                { value: 'off', label: 'Off (on-screen text only)' },
-                { value: 'local', label: 'Whisper on this server' },
+                { value: 'off', label: t('settings.tasks.speechOff') },
+                { value: 'local', label: t('settings.tasks.speechLocal') },
                 ...audioProviders.map(p => ({ value: `provider:${p.id}`, label: p.name })),
               ]}
             />
@@ -158,33 +161,35 @@ export function AiTasksCard({ providers, get, set }: {
             />
           ) : speechValue === 'local' ? (
             <>
-              <Field label="Whisper model" hint="Larger is more accurate but slower. Small suits mixed-language videos.">
+              <Field label={t('settings.tasks.whisperModel')} hint={t('settings.tasks.whisperHint')}>
                 <Choice
                   value={get('whisper_model') || 'small'}
                   onChange={v => set('whisper_model', v)}
                   options={[
-                    { value: 'tiny', label: 'Tiny (fastest, least accurate)' },
-                    { value: 'base', label: 'Base' },
-                    { value: 'small', label: 'Small (recommended)' },
-                    { value: 'medium', label: 'Medium' },
-                    { value: 'large-v3', label: 'Large v3 (slowest, most accurate)' },
+                    { value: 'tiny', label: t('settings.tasks.whisper.tiny') },
+                    { value: 'base', label: t('settings.tasks.whisper.base') },
+                    { value: 'small', label: t('settings.tasks.whisper.small') },
+                    { value: 'medium', label: t('settings.tasks.whisper.medium') },
+                    { value: 'large-v3', label: t('settings.tasks.whisper.large') },
                   ]}
                 />
               </Field>
               <Field
-                label="HuggingFace token"
+                label={t('settings.tasks.hfToken')}
                 hint={
-                  <>
-                    Optional. Only downloads the Whisper weights faster. Get one at{' '}
-                    <a
-                      href="https://huggingface.co/settings/tokens"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline underline-offset-2 hover:text-foreground"
-                    >
-                      huggingface.co
-                    </a>
-                  </>
+                  <Trans
+                    i18nKey="settings.tasks.hfHint"
+                    components={{
+                      a: (
+                        <a
+                          href="https://huggingface.co/settings/tokens"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline underline-offset-2 hover:text-foreground"
+                        />
+                      ),
+                    }}
+                  />
                 }
               >
                 <Input

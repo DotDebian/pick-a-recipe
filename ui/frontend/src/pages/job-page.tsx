@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Trans, useTranslation } from 'react-i18next'
 import { HomeIcon, ListChecksIcon } from 'lucide-react'
 import { JobCard } from '@/components/job-card'
 import { Button } from '@/components/ui/button'
@@ -22,15 +23,16 @@ import { api } from '@/lib/api'
 import { useJobRoom, useSocketEvent, useTransitionEvent } from '@/lib/socket'
 import type { Job, JobProgressPayload, JobCompletePayload, JobFailedPayload, JobTransitionPayload } from '@/types'
 
-function formatTimestamp(raw: string): string {
+function formatTimestamp(raw: string, locale: string): string {
   try {
-    return new Date(raw.replace(' ', 'T')).toLocaleString()
+    return new Date(raw.replace(' ', 'T')).toLocaleString(locale)
   } catch {
     return raw
   }
 }
 
 export function JobPage() {
+  const { t, i18n } = useTranslation()
   const { jobId } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -53,14 +55,14 @@ export function JobPage() {
 
   useEffect(() => {
     if (job?.video_title) {
-      document.title = `${job.video_title} — Pick-a-Recipe`
+      document.title = t('tasks.job.docTitle', { title: job.video_title })
     } else {
-      document.title = 'Job Progress — Pick-a-Recipe'
+      document.title = t('tasks.job.docTitleDefault')
     }
     return () => {
       document.title = 'Pick-a-Recipe'
     }
-  }, [job?.video_title])
+  }, [job?.video_title, t])
 
   useJobRoom(jobId)
 
@@ -94,12 +96,12 @@ export function JobPage() {
       (data: JobFailedPayload) => {
         if (data.job_id !== jobId) return
         invalidate()
-        toast.error(data.error?.trim() || 'The job failed.', {
+        toast.error(data.error?.trim() || t('tasks.job.failed'), {
           duration: Infinity,
           id: `job-failed-${data.job_id}`,
         })
       },
-      [jobId, invalidate],
+      [jobId, invalidate, t],
     ),
   )
 
@@ -131,28 +133,28 @@ export function JobPage() {
     setCancelling(true)
     try {
       await api.cancelJob(jobId)
-      toast.success('Job cancelled')
+      toast.success(t('tasks.job.cancelled'))
       invalidate()
     } catch {
-      toast.error('Failed to cancel job')
+      toast.error(t('tasks.job.cancelFailed'))
     } finally {
       setCancelling(false)
     }
-  }, [jobId, invalidate])
+  }, [jobId, invalidate, t])
 
   const handleRetry = useCallback(async () => {
     if (!job) return
     setRetrying(true)
     try {
       const data = await api.retryJob({ url: job.url })
-      toast.success('Retry started')
+      toast.success(t('tasks.job.retryStarted'))
       navigate(`/jobs/${data.job_id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Retry failed')
+      toast.error(err instanceof Error ? err.message : t('tasks.job.retryFailed'))
     } finally {
       setRetrying(false)
     }
-  }, [job, navigate])
+  }, [job, navigate, t])
 
   const is404 =
     isError &&
@@ -171,13 +173,13 @@ export function JobPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link to="/">
             <HomeIcon className="size-4" />
-            Home
+            {t('tasks.job.home')}
           </Link>
         </Button>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/tasks">
             <ListChecksIcon className="size-4" />
-            Tasks
+            {t('tasks.job.tasks')}
           </Link>
         </Button>
       </div>
@@ -192,12 +194,14 @@ export function JobPage() {
       {is404 && (
         <Card>
           <CardHeader>
-            <CardTitle>Job not found</CardTitle>
+            <CardTitle>{t('tasks.job.notFoundTitle')}</CardTitle>
             <CardDescription>
-              Job <span className="font-mono text-xs">{jobId}</span> does not exist or has been
-              removed.{' '}
+              <Trans
+                i18nKey="tasks.job.notFoundBody"
+                components={{ id: <span className="font-mono text-xs">{jobId}</span> }}
+              />{' '}
               <Link to="/" className="underline underline-offset-4 hover:text-foreground">
-                Go home
+                {t('tasks.job.goHome')}
               </Link>
             </CardDescription>
           </CardHeader>
@@ -207,8 +211,8 @@ export function JobPage() {
       {isError && !is404 && (
         <Card>
           <CardHeader>
-            <CardTitle>Failed to load job</CardTitle>
-            <CardDescription>{error instanceof Error ? error.message : 'Unknown error'}</CardDescription>
+            <CardTitle>{t('tasks.job.loadFailed')}</CardTitle>
+            <CardDescription>{error instanceof Error ? error.message : t('tasks.job.unknownError')}</CardDescription>
           </CardHeader>
         </Card>
       )}
@@ -236,25 +240,24 @@ export function JobPage() {
             <AlertDialogTrigger id="cancel-trigger" className="sr-only" />
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Cancel this job?</AlertDialogTitle>
+                <AlertDialogTitle>{t('tasks.job.cancelTitle')}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  The job will be stopped and cannot be resumed. You can start a new job from the
-                  same URL if needed.
+                  {t('tasks.job.cancelDescription')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Keep running</AlertDialogCancel>
+                <AlertDialogCancel>{t('tasks.job.keepRunning')}</AlertDialogCancel>
                 <AlertDialogAction variant="destructive" onClick={() => void handleCancel()}>
-                  Cancel job
+                  {t('tasks.cancelJob')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
 
           <p className="text-xs text-muted-foreground text-center">
-            Created {formatTimestamp(job.created_at)}
+            {t('tasks.job.created', { date: formatTimestamp(job.created_at, i18n.language) })}
             {job.updated_at !== job.created_at && (
-              <> &middot; Updated {formatTimestamp(job.updated_at)}</>
+              <> &middot; {t('tasks.job.updated', { date: formatTimestamp(job.updated_at, i18n.language) })}</>
             )}
           </p>
         </>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { KeyRoundIcon, Trash2Icon, UserPlusIcon, UsersIcon } from 'lucide-react'
 
 import { api } from '@/lib/api'
@@ -45,6 +46,7 @@ function AddUserDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -60,12 +62,12 @@ function AddUserDialog({
     mutationFn: () => api.createUser(username.trim(), password, isAdmin),
     onSuccess: async ({ user }) => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
-      toast.success(`Created ${user.username}`)
+      toast.success(t('settings.users.created', { name: user.username }))
       reset()
       onOpenChange(false)
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Could not create the account')
+      toast.error(err instanceof Error ? err.message : t('settings.users.createFailed'))
     },
   })
 
@@ -84,10 +86,9 @@ function AddUserDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add an account</DialogTitle>
+          <DialogTitle>{t('settings.users.addTitle')}</DialogTitle>
           <DialogDescription>
-            You choose the password and pass it on yourself — there is no
-            self-registration and no invitation email.
+            {t('settings.users.addDescription')}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -98,7 +99,7 @@ function AddUserDialog({
           }}
         >
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-username">Username</Label>
+            <Label htmlFor="new-username">{t('settings.users.username')}</Label>
             <Input
               id="new-username"
               value={username}
@@ -109,7 +110,7 @@ function AddUserDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-user-password">Password</Label>
+            <Label htmlFor="new-user-password">{t('settings.users.password')}</Label>
             <Input
               id="new-user-password"
               type="password"
@@ -119,16 +120,14 @@ function AddUserDialog({
               minLength={MIN_PASSWORD_LENGTH}
             />
             <p className="text-xs text-muted-foreground">
-              At least {MIN_PASSWORD_LENGTH} characters. They can change it once
-              signed in.
+              {t('settings.users.passwordHint', { count: MIN_PASSWORD_LENGTH })}
             </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
             <div>
-              <Label htmlFor="new-user-admin">Administrator</Label>
+              <Label htmlFor="new-user-admin">{t('settings.users.administrator')}</Label>
               <p className="text-xs text-muted-foreground">
-                Can change settings, see everyone's extractions, and manage
-                accounts.
+                {t('settings.users.administratorHint')}
               </p>
             </div>
             <Switch
@@ -143,10 +142,10 @@ function AddUserDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t('settings.users.cancel')}
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              {create.isPending ? 'Creating…' : 'Create account'}
+              {create.isPending ? t('settings.users.creating') : t('settings.users.create')}
             </Button>
           </DialogFooter>
         </form>
@@ -162,17 +161,18 @@ function ResetPasswordDialog({
   user: ManagedUser | null
   onClose: () => void
 }) {
+  const { t } = useTranslation()
   const [password, setPassword] = useState('')
 
   const reset = useMutation({
     mutationFn: () => api.resetUserPassword(user!.username, password),
     onSuccess: () => {
-      toast.success(`Password set for ${user!.username}`)
+      toast.success(t('settings.users.passwordSet', { name: user!.username }))
       setPassword('')
       onClose()
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Could not set the password')
+      toast.error(err instanceof Error ? err.message : t('settings.users.passwordSetFailed'))
     },
   })
 
@@ -188,10 +188,9 @@ function ResetPasswordDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Set a new password</DialogTitle>
+          <DialogTitle>{t('settings.users.resetTitle')}</DialogTitle>
           <DialogDescription>
-            For {user?.username}. Their existing sessions stay signed in; the new
-            password applies the next time they sign in.
+            {t('settings.users.resetDescription', { name: user?.username })}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -202,7 +201,7 @@ function ResetPasswordDialog({
           }}
         >
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reset-password">New password</Label>
+            <Label htmlFor="reset-password">{t('settings.users.newPassword')}</Label>
             <Input
               id="reset-password"
               type="password"
@@ -214,13 +213,13 @@ function ResetPasswordDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t('settings.users.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={password.length < MIN_PASSWORD_LENGTH || reset.isPending}
             >
-              {reset.isPending ? 'Setting…' : 'Set password'}
+              {reset.isPending ? t('settings.users.setting') : t('settings.users.setPassword')}
             </Button>
           </DialogFooter>
         </form>
@@ -242,6 +241,7 @@ function UserRow({
   onResetPassword: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
 
   const toggleAdmin = useMutation({
@@ -250,7 +250,7 @@ function UserRow({
       await queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Could not change rights')
+      toast.error(err instanceof Error ? err.message : t('settings.users.rightsFailed'))
     },
   })
 
@@ -263,10 +263,10 @@ function UserRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-medium">{user.username}</span>
-          {isSelf && <Badge variant="secondary">you</Badge>}
-          {user.is_oidc && <Badge variant="outline">SSO</Badge>}
+          {isSelf && <Badge variant="secondary">{t('settings.users.you')}</Badge>}
+          {user.is_oidc && <Badge variant="outline">{t('settings.users.sso')}</Badge>}
           {!user.has_password && !user.is_oidc && (
-            <Badge variant="outline">no password</Badge>
+            <Badge variant="outline">{t('settings.users.noPassword')}</Badge>
           )}
         </div>
         {user.email && (
@@ -279,7 +279,7 @@ function UserRow({
           htmlFor={`admin-${user.username}`}
           className="text-xs text-muted-foreground"
         >
-          Admin
+          {t('settings.users.admin')}
         </Label>
         <Switch
           id={`admin-${user.username}`}
@@ -293,7 +293,7 @@ function UserRow({
         variant="ghost"
         size="icon"
         onClick={onResetPassword}
-        title="Set a new password"
+        title={t('settings.users.resetTitle')}
       >
         <KeyRoundIcon />
       </Button>
@@ -302,7 +302,7 @@ function UserRow({
         size="icon"
         onClick={onDelete}
         disabled={isSelf || (user.is_admin && lastAdmin)}
-        title={isSelf ? 'You cannot delete your own account' : 'Delete account'}
+        title={isSelf ? t('settings.users.cannotDeleteSelf') : t('settings.users.deleteAccount')}
       >
         <Trash2Icon />
       </Button>
@@ -315,6 +315,7 @@ function UserRow({
  * identity provider owns accounts and group membership owns admin rights.
  */
 export function UsersCard({ currentUsername }: { currentUsername: string }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
   const [resetting, setResetting] = useState<ManagedUser | null>(null)
@@ -330,11 +331,11 @@ export function UsersCard({ currentUsername }: { currentUsername: string }) {
     onSuccess: async ({ username }) => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
       await queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success(`Deleted ${username}`)
+      toast.success(t('settings.users.deleted', { name: username }))
       setDeleting(null)
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : 'Could not delete the account')
+      toast.error(err instanceof Error ? err.message : t('settings.users.deleteFailed'))
     },
   })
 
@@ -345,11 +346,10 @@ export function UsersCard({ currentUsername }: { currentUsername: string }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UsersIcon className="size-4" />
-          Accounts
+          {t('settings.users.title')}
         </CardTitle>
         <CardDescription>
-          Everyone who can sign in to this instance. Only administrators can add
-          or remove accounts.
+          {t('settings.users.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -376,7 +376,7 @@ export function UsersCard({ currentUsername }: { currentUsername: string }) {
           onClick={() => setAdding(true)}
         >
           <UserPlusIcon />
-          Add account
+          {t('settings.users.add')}
         </Button>
       </CardContent>
 
@@ -391,19 +391,17 @@ export function UsersCard({ currentUsername }: { currentUsername: string }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleting?.username}?</AlertDialogTitle>
+            <AlertDialogTitle>{t('settings.users.deleteTitle', { name: deleting?.username })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Their queued extractions and pending uploads are deleted with the
-              account. Recipes already saved to your history belong to the
-              instance and are kept.
+              {t('settings.users.deleteBody')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('settings.users.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleting && remove.mutate(deleting.username)}
             >
-              Delete account
+              {t('settings.users.deleteAccount')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
