@@ -1,5 +1,8 @@
 yt-dlp[curl-cffi]
 faster_whisper
+# Parakeet Ultra/Redux speech to text through Moondream Photon. The Dockerfile
+# installs the CPU-only torch first, so this does not pull ~4 GB of CUDA.
+moondream>=2.4.0
 openai
 # Only needed for a provider configured with the Anthropic API type; imported
 # lazily so the rest of the app runs without it.

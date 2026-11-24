@@ -303,10 +303,12 @@ export interface AppConfig {
   /** JSON array of AiProvider; see the AI Providers card. */
   ai_providers: string
   ai_extraction_provider: string
-  /** 'local' runs Whisper here, 'provider' posts audio to a provider. */
+  /** 'local' runs Whisper here, 'parakeet' runs Parakeet here, 'provider' posts audio to a provider. */
   transcription_mode: string
   transcription_provider: string
   transcription_model: string
+  /** Photon model used when transcription_mode is 'parakeet'. */
+  parakeet_model: string
   /** Model for extraction, Sous Chef and imports; empty uses the provider's own. */
   ai_extraction_model: string
   /** Superseded by ai_providers; still read when migrating an old install. */

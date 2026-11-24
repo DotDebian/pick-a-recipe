@@ -31,6 +31,13 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
+# CPU-only torch first: moondream (Parakeet) depends on torch, and the default
+# wheel bundles ~4 GB of CUDA libraries that do nothing without an NVIDIA GPU.
+# Build with --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu130
+# to keep CUDA for a GPU host.
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --index-url "$TORCH_INDEX" torch
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -209,7 +209,35 @@ class Transcriber:
         if remote is not None:
             return remote
 
+        if config.TRANSCRIPTION_MODE == "parakeet":
+            text = self._transcribe_with_parakeet(audio_path, lang)
+            if text is not None:
+                return text
+
         return self._transcribe_locally(audio_path, lang)
+
+    def _transcribe_with_parakeet(self, audio_path: str, lang: str | None) -> str | None:
+        """Parakeet on this machine, or None to fall back to Whisper.
+
+        Falls back when the spoken language is known to be outside the 25
+        languages Parakeet covers, and when Parakeet itself fails (missing
+        package, download error), so a video is never lost to it.
+        """
+        import parakeet_pool
+
+        if lang and lang.split("-")[0].lower() not in parakeet_pool.SUPPORTED_LANGUAGES:
+            logger.info(
+                "[Transcribe] Parakeet does not cover %r; using Whisper.", lang)
+            return None
+        try:
+            logger.info("[Transcribe] Transcribing with %s", config.PARAKEET_MODEL)
+            return parakeet_pool.transcribe(audio_path)
+        except Exception as exc:
+            logger.warning(
+                "[Transcribe] Parakeet failed (%s); falling back to local Whisper.",
+                exc,
+            )
+            return None
 
     def _transcribe_with_provider(self, audio_path: str, lang: str | None) -> str | None:
         """Transcription from the configured provider, or None to use Whisper."""

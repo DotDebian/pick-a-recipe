@@ -211,7 +211,8 @@
                 <label for="transcription_mode">Transcribe with</label>
                 <select id="transcription_mode" name="transcription_mode" class="form-select">
                     <option value="off" {% if config.transcription_mode == 'off' %}selected{% endif %}>Off (on-screen text only)</option>
-                    <option value="local" {% if config.transcription_mode != 'provider' and config.transcription_mode != 'off' %}selected{% endif %}>Whisper on this server (no API needed)</option>
+                    <option value="parakeet" {% if config.transcription_mode == 'parakeet' %}selected{% endif %}>Parakeet on this server (fast, 25 European languages)</option>
+                    <option value="local" {% if config.transcription_mode not in ('provider', 'off', 'parakeet') %}selected{% endif %}>Whisper on this server (no API needed)</option>
                     <option value="provider" {% if config.transcription_mode == 'provider' %}selected{% endif %}>One of the AI providers above</option>
                 </select>
             </div>

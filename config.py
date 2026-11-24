@@ -94,6 +94,8 @@ def migrate_legacy_database() -> bool:
 migrate_legacy_database()
 
 # Default configuration values
+PARAKEET_MODELS = ("moondream/parakeet-ultra", "moondream/parakeet-redux")
+
 DEFAULT_CONFIG = {
     # JSON array of AI provider records; see ai_providers.py. Empty on an
     # install predating it, which derives an equivalent list from the
@@ -107,6 +109,8 @@ DEFAULT_CONFIG = {
     # and builds the recipe from on-screen text. 'off' never loads Whisper,
     # which matters on a small machine where the model takes the process down.
     "transcription_mode": "local",
+    # Model served by Photon when transcription_mode is 'parakeet'.
+    "parakeet_model": "moondream/parakeet-ultra",
     "transcription_provider": "",
     "transcription_model": "whisper-1",
     # Superseded by ai_providers, kept so an existing install still boots with
@@ -264,7 +268,12 @@ class Config:
     @property
     def TRANSCRIPTION_MODE(self) -> str:
         mode = self._get('transcription_mode', DEFAULT_CONFIG['transcription_mode'])
-        return mode if mode in ('local', 'provider', 'off') else 'local'
+        return mode if mode in ('local', 'parakeet', 'provider', 'off') else 'local'
+
+    @property
+    def PARAKEET_MODEL(self) -> str:
+        model = self._get('parakeet_model', DEFAULT_CONFIG['parakeet_model'])
+        return model if model in PARAKEET_MODELS else DEFAULT_CONFIG['parakeet_model']
 
     @property
     def TRANSCRIPTION_PROVIDER(self) -> str:

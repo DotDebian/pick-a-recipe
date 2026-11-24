@@ -1354,6 +1354,7 @@ def settings():
             'tandoor_api_key', 'tandoor_host',
             'target_language',
             'whisper_model',
+            'parakeet_model',
             'hf_token',
             'yt_dlp_cookies_file',
             'max_concurrent_jobs',

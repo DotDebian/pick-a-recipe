@@ -393,6 +393,27 @@ call is a plain single-turn request; JSON comes back through the SDK's
 `output_format` structured output. Vision (frames, dish photo) works. Audio
 still goes through local Whisper. Subscription usage limits apply.
 
+### Parakeet speech to text — fork addition
+
+Settings → Speech to Text → **Parakeet on this server** transcribes with
+[Moondream Parakeet Ultra](https://huggingface.co/moondream/parakeet-ultra)
+(or the lighter Redux) through the Photon runtime, on the CPU, with no API.
+Measured on an 8-thread desktop CPU without a GPU, on real recipe videos:
+
+| clip | Whisper small | Parakeet Ultra |
+| --- | --- | --- |
+| French, 90 s, music | 31.7 s | 9.5 s |
+| French, 60 s | 13.2 s | 5.3 s |
+| English, 34 s | 7.4 s | 3.9 s |
+
+Ultra also made fewer mistakes on those clips. It covers 25 European
+languages; a video in another language, or any Parakeet failure, falls back to
+Whisper automatically. The Dockerfile installs the CPU-only torch build, so
+the image does not carry ~4 GB of CUDA libraries; pass
+`--build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu130` on a GPU
+host. Set `HF_HOME=/app/data/hf-cache` to keep the 1.25 GB weights across
+restarts.
+
 ## Usage
 
 ### Web UI

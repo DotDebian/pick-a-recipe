@@ -76,7 +76,8 @@ export function AiTasksCard({ providers, get, set }: {
   const audioProviders = named.filter(p => AUDIO_API_TYPES.includes(p.api_type))
   const mode = get('transcription_mode') || 'local'
   const transcriber = mode === 'provider' ? byId(get('transcription_provider')) ?? audioProviders[0] : undefined
-  const speechValue = mode === 'off' ? 'off' : transcriber ? `provider:${transcriber.id}` : 'local'
+  const speechValue =
+    mode === 'off' ? 'off' : transcriber ? `provider:${transcriber.id}` : mode === 'parakeet' ? 'parakeet' : 'local'
 
   const providerOptions = named.map(p => ({ value: p.id, label: p.name }))
 
@@ -136,7 +137,7 @@ export function AiTasksCard({ providers, get, set }: {
             <Choice
               value={speechValue}
               onChange={v => {
-                if (v === 'off' || v === 'local') {
+                if (v === 'off' || v === 'local' || v === 'parakeet') {
                   set('transcription_mode', v)
                   return
                 }
@@ -145,6 +146,7 @@ export function AiTasksCard({ providers, get, set }: {
               }}
               options={[
                 { value: 'off', label: t('settings.tasks.speechOff') },
+                { value: 'parakeet', label: t('settings.tasks.speechParakeet') },
                 { value: 'local', label: t('settings.tasks.speechLocal') },
                 ...audioProviders.map(p => ({ value: `provider:${p.id}`, label: p.name })),
               ]}
@@ -159,6 +161,17 @@ export function AiTasksCard({ providers, get, set }: {
               onChange={v => set('transcription_model', v)}
               placeholder={catalogFor(transcriber) === 'openrouter' ? 'openai/whisper-large-v3-turbo' : 'whisper-1'}
             />
+          ) : speechValue === 'parakeet' ? (
+            <Field label={t('settings.tasks.parakeetModel')} hint={t('settings.tasks.parakeetHint')}>
+              <Choice
+                value={get('parakeet_model') || 'moondream/parakeet-ultra'}
+                onChange={v => set('parakeet_model', v)}
+                options={[
+                  { value: 'moondream/parakeet-ultra', label: t('settings.tasks.parakeet.ultra') },
+                  { value: 'moondream/parakeet-redux', label: t('settings.tasks.parakeet.redux') },
+                ]}
+              />
+            </Field>
           ) : speechValue === 'local' ? (
             <>
               <Field label={t('settings.tasks.whisperModel')} hint={t('settings.tasks.whisperHint')}>

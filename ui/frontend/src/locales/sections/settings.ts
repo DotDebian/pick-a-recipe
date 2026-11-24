@@ -163,6 +163,13 @@ export const en = {
     speechLocal: 'Whisper on this server',
     whisperModel: 'Whisper model',
     whisperHint: 'Larger is more accurate but slower. Small suits mixed-language videos.',
+    speechParakeet: 'Parakeet on this server (fast, 25 European languages)',
+    parakeetModel: 'Parakeet model',
+    parakeetHint: 'Runs on the CPU, no API. Videos in other languages, or if Parakeet fails, fall back to Whisper.',
+    parakeet: {
+      ultra: 'Ultra (most accurate, recommended)',
+      redux: 'Redux (lighter, less accurate with music)',
+    },
     whisper: {
       tiny: 'Tiny (fastest, least accurate)',
       base: 'Base',
@@ -418,6 +425,13 @@ export const fr: typeof en = {
     speechLocal: 'Whisper sur ce serveur',
     whisperModel: 'Modèle Whisper',
     whisperHint: 'Plus grand est plus précis mais plus lent. Small convient aux vidéos multilingues.',
+    speechParakeet: 'Parakeet sur ce serveur (rapide, 25 langues européennes)',
+    parakeetModel: 'Modèle Parakeet',
+    parakeetHint: 'Tourne sur le processeur, sans API. Les vidéos dans une autre langue, ou en cas d’échec de Parakeet, passent par Whisper.',
+    parakeet: {
+      ultra: 'Ultra (le plus précis, recommandé)',
+      redux: 'Redux (plus léger, moins précis avec de la musique)',
+    },
     whisper: {
       tiny: 'Tiny (le plus rapide, le moins précis)',
       base: 'Base',
